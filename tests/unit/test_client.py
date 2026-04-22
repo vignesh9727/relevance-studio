@@ -101,8 +101,18 @@ class TestSetupClients:
         with pytest.raises(ValueError, match="either CONTENT_ELASTIC_CLOUD_ID or CONTENT_ELASTICSEARCH_URL, not both"):
             _setup_clients()
 
-    def test_setup_clients_rejects_studio_api_key_with_basic_auth_when_auth_enabled(self, monkeypatch):
-        monkeypatch.setattr("server.client.AUTH_ENABLED", True)
+    def test_setup_clients_rejects_studio_api_key_with_basic_auth(self, monkeypatch):
+        monkeypatch.setattr("server.client.ELASTIC_CLOUD_ID", "")
+        monkeypatch.setattr("server.client.ELASTICSEARCH_URL", "http://localhost:9200")
+        monkeypatch.setattr("server.client.ELASTICSEARCH_API_KEY", "abc123")
+        monkeypatch.setattr("server.client.ELASTICSEARCH_USERNAME", "elastic")
+        monkeypatch.setattr("server.client.ELASTICSEARCH_PASSWORD", "changeme")
+
+        with pytest.raises(ValueError, match="either ELASTICSEARCH_API_KEY or ELASTICSEARCH_USERNAME/ELASTICSEARCH_PASSWORD"):
+            _setup_clients()
+
+    def test_setup_clients_rejects_studio_api_key_with_basic_auth_when_auth_disabled(self, monkeypatch):
+        monkeypatch.setattr("server.client.AUTH_ENABLED", False)
         monkeypatch.setattr("server.client.ELASTIC_CLOUD_ID", "")
         monkeypatch.setattr("server.client.ELASTICSEARCH_URL", "http://localhost:9200")
         monkeypatch.setattr("server.client.ELASTICSEARCH_API_KEY", "abc123")
@@ -157,7 +167,12 @@ class TestSetupClients:
         assert "api_key" not in calls[0]
         assert "basic_auth" not in calls[0]
 
-    def test_setup_clients_ignores_studio_credentials_when_auth_disabled(self, monkeypatch):
+    def test_setup_clients_uses_studio_credentials_when_auth_disabled(self, monkeypatch):
+        """When AUTH_ENABLED=false, configured ES credentials are still applied to the studio
+        client. The AUTH_ENABLED flag controls whether the Studio UI requires login — it does
+        not mean the backing Elasticsearch cluster is unsecured. Without this, every ES API
+        call returns 401 which the frontend interprets as "session expired" and redirects to
+        the login page, defeating the purpose of disabling auth."""
         calls = []
 
         class FakeClient:
@@ -171,7 +186,39 @@ class TestSetupClients:
         monkeypatch.setattr("server.client.AUTH_ENABLED", False)
         monkeypatch.setattr("server.client.ELASTIC_CLOUD_ID", "")
         monkeypatch.setattr("server.client.ELASTICSEARCH_URL", "http://localhost:9200")
-        monkeypatch.setattr("server.client.ELASTICSEARCH_API_KEY", "should-not-be-used")
+        monkeypatch.setattr("server.client.ELASTICSEARCH_API_KEY", "my-api-key")
+        monkeypatch.setattr("server.client.ELASTICSEARCH_USERNAME", "")
+        monkeypatch.setattr("server.client.ELASTICSEARCH_PASSWORD", "")
+        monkeypatch.setattr("server.client.CONTENT_ELASTIC_CLOUD_ID", "")
+        monkeypatch.setattr("server.client.CONTENT_ELASTICSEARCH_URL", "")
+        monkeypatch.setattr("server.client.CONTENT_ELASTICSEARCH_API_KEY", "")
+        monkeypatch.setattr("server.client.CONTENT_ELASTICSEARCH_USERNAME", "")
+        monkeypatch.setattr("server.client.CONTENT_ELASTICSEARCH_PASSWORD", "")
+        monkeypatch.setattr("server.client.Elasticsearch", _fake_es_client)
+
+        clients = _setup_clients()
+
+        assert "studio" in clients
+        assert len(calls) == 1
+        assert calls[0]["hosts"] == ["http://localhost:9200"]
+        assert calls[0]["api_key"] == "my-api-key"
+
+    def test_setup_clients_uses_basic_auth_when_auth_disabled(self, monkeypatch):
+        """When AUTH_ENABLED=false with username/password, credentials are still applied."""
+        calls = []
+
+        class FakeClient:
+            def __init__(self, **kwargs):
+                self.kwargs = kwargs
+
+        def _fake_es_client(**kwargs):
+            calls.append(kwargs)
+            return FakeClient(**kwargs)
+
+        monkeypatch.setattr("server.client.AUTH_ENABLED", False)
+        monkeypatch.setattr("server.client.ELASTIC_CLOUD_ID", "")
+        monkeypatch.setattr("server.client.ELASTICSEARCH_URL", "http://localhost:9200")
+        monkeypatch.setattr("server.client.ELASTICSEARCH_API_KEY", "")
         monkeypatch.setattr("server.client.ELASTICSEARCH_USERNAME", "elastic")
         monkeypatch.setattr("server.client.ELASTICSEARCH_PASSWORD", "changeme")
         monkeypatch.setattr("server.client.CONTENT_ELASTIC_CLOUD_ID", "")
@@ -185,6 +232,4 @@ class TestSetupClients:
 
         assert "studio" in clients
         assert len(calls) == 1
-        assert calls[0]["hosts"] == ["http://localhost:9200"]
-        assert "api_key" not in calls[0]
-        assert "basic_auth" not in calls[0]
+        assert calls[0]["basic_auth"] == ("elastic", "changeme")

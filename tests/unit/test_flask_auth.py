@@ -41,6 +41,20 @@ class TestAuthDisabled:
         data = r.get_json()
         assert data["user"]["username"] == "system"
 
+    def test_api_routes_never_return_401_when_auth_disabled(self, client, monkeypatch):
+        """With AUTH_ENABLED=false, the studio ES client must use configured credentials so that
+        authenticated ES clusters don't return 401. A 401 from any non-auth endpoint triggers
+        logout() in the frontend, redirecting users to the login page even though auth is off."""
+        from unittest.mock import MagicMock
+        import server.client as client_mod
+        mock_es = MagicMock()
+        monkeypatch.setattr(client_mod, "_es_clients", {"studio": mock_es, "content": mock_es})
+        r = client.get("/api/auth/session")
+        assert r.status_code != 401
+
+        r = client.get("/api/setup")
+        assert r.status_code != 401
+
 
 class TestAuthEnabled:
     """When AUTH_ENABLED=true, /api/* (except login) require session."""

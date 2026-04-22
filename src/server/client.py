@@ -123,9 +123,9 @@ def _setup_clients() -> Dict[str, Elasticsearch]:
     _validate_endpoint_configuration()
     if not ELASTIC_CLOUD_ID and not ELASTICSEARCH_URL:
         raise ValueError("You must configure either ELASTIC_CLOUD_ID or ELASTICSEARCH_URL in .env")
-    if AUTH_ENABLED and ELASTICSEARCH_API_KEY and (ELASTICSEARCH_USERNAME or ELASTICSEARCH_PASSWORD):
+    if ELASTICSEARCH_API_KEY and (ELASTICSEARCH_USERNAME or ELASTICSEARCH_PASSWORD):
         raise ValueError("Configure either ELASTICSEARCH_API_KEY or ELASTICSEARCH_USERNAME/ELASTICSEARCH_PASSWORD, not both.")
-    if AUTH_ENABLED and ((ELASTICSEARCH_USERNAME and not ELASTICSEARCH_PASSWORD) or (not ELASTICSEARCH_USERNAME and ELASTICSEARCH_PASSWORD)):
+    if (ELASTICSEARCH_USERNAME and not ELASTICSEARCH_PASSWORD) or (not ELASTICSEARCH_USERNAME and ELASTICSEARCH_PASSWORD):
         raise ValueError("You must configure both of ELASTICSEARCH_USERNAME and ELASTICSEARCH_PASSWORD in .env")
     if (CONTENT_ELASTICSEARCH_USERNAME and not CONTENT_ELASTICSEARCH_PASSWORD) or (not CONTENT_ELASTICSEARCH_USERNAME and CONTENT_ELASTICSEARCH_PASSWORD):
         raise ValueError("You must configure both of CONTENT_ELASTICSEARCH_USERNAME and CONTENT_ELASTICSEARCH_PASSWORD in .env")
@@ -153,14 +153,13 @@ def _setup_clients() -> Dict[str, Elasticsearch]:
         es_studio_kwargs["cloud_id"] = ELASTIC_CLOUD_ID
     else:
         es_studio_kwargs["hosts"] = [ ELASTICSEARCH_URL ]
-    if AUTH_ENABLED:
-        if ELASTICSEARCH_API_KEY:
-            es_studio_kwargs["api_key"] = ELASTICSEARCH_API_KEY
-        elif ELASTICSEARCH_USERNAME and ELASTICSEARCH_PASSWORD:
-            es_studio_kwargs["basic_auth"] = (
-                ELASTICSEARCH_USERNAME,
-                ELASTICSEARCH_PASSWORD
-            )
+    if ELASTICSEARCH_API_KEY:
+        es_studio_kwargs["api_key"] = ELASTICSEARCH_API_KEY
+    elif ELASTICSEARCH_USERNAME and ELASTICSEARCH_PASSWORD:
+        es_studio_kwargs["basic_auth"] = (
+            ELASTICSEARCH_USERNAME,
+            ELASTICSEARCH_PASSWORD
+        )
     es_clients["studio"] = Elasticsearch(**es_studio_kwargs)
 
     # Setup client for deployment with source content
