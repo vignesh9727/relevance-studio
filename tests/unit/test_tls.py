@@ -14,7 +14,7 @@ import os
 import pytest
 
 # App packages
-from server.tls import get_tls_config
+from server.tls import _parse_bool, _strip_env, get_tls_config, log_tls_status
 
 
 class TestTlsConfig:
@@ -133,3 +133,113 @@ class TestTlsConfig:
         assert len(cfg["ssl_context"]) == 2
         assert cfg["ssl_context"][0] == str(cert)
         assert cfg["ssl_context"][1] == str(key)
+
+    def test_quoted_tls_enabled_treated_as_true(self, monkeypatch, tmp_path):
+        """Surrounding quotes around TLS_ENABLED must not silently disable TLS."""
+        cert = tmp_path / "cert.pem"
+        key = tmp_path / "key.pem"
+        cert.write_text("")
+        key.write_text("")
+        for raw in ('"true"', "'true'", '  "true"  '):
+            monkeypatch.setenv("TLS_ENABLED", raw)
+            monkeypatch.setenv("TLS_CERT_FILE", str(cert))
+            monkeypatch.setenv("TLS_KEY_FILE", str(key))
+            cfg = get_tls_config()
+            assert cfg["enabled"] is True, f"failed for raw={raw!r}"
+            assert cfg["error"] is None, f"failed for raw={raw!r}"
+            assert cfg["uvicorn_config"] == {
+                "ssl_certfile": str(cert),
+                "ssl_keyfile": str(key),
+            }
+
+    def test_quoted_tls_paths_stripped(self, monkeypatch, tmp_path):
+        """Surrounding quotes around cert/key paths must be stripped."""
+        cert = tmp_path / "cert.pem"
+        key = tmp_path / "key.pem"
+        cert.write_text("")
+        key.write_text("")
+        monkeypatch.setenv("TLS_ENABLED", "true")
+        monkeypatch.setenv("TLS_CERT_FILE", f'"{cert}"')
+        monkeypatch.setenv("TLS_KEY_FILE", f"'{key}'")
+        cfg = get_tls_config()
+        assert cfg["error"] is None
+        assert cfg["ssl_context"] == (str(cert), str(key))
+
+
+class TestStripEnv:
+    """Tests for _strip_env()."""
+
+    def test_none_returns_empty(self):
+        assert _strip_env(None) == ""
+
+    def test_strips_whitespace(self):
+        assert _strip_env("  hello  ") == "hello"
+
+    def test_strips_double_quotes(self):
+        assert _strip_env('"hello"') == "hello"
+
+    def test_strips_single_quotes(self):
+        assert _strip_env("'hello'") == "hello"
+
+    def test_strips_quotes_with_outer_whitespace(self):
+        assert _strip_env('  "hello"  ') == "hello"
+
+    def test_unmatched_quotes_kept(self):
+        assert _strip_env('"hello') == '"hello'
+        assert _strip_env("hello'") == "hello'"
+
+    def test_mismatched_quotes_kept(self):
+        assert _strip_env("'hello\"") == "'hello\""
+
+    def test_only_strips_one_pair(self):
+        assert _strip_env("\"'hello'\"") == "'hello'"
+
+
+class TestParseBool:
+    """Tests for _parse_bool()."""
+
+    @pytest.mark.parametrize("raw", ["true", "True", "TRUE", "1", "yes", "on", '"true"', "'true'", "  true  "])
+    def test_truthy(self, raw):
+        assert _parse_bool(raw, default=False) is True
+
+    @pytest.mark.parametrize("raw", ["false", "False", "0", "no", "off", '"false"', "'false'"])
+    def test_falsy(self, raw):
+        assert _parse_bool(raw, default=True) is False
+
+    def test_empty_uses_default(self):
+        assert _parse_bool("", default=True) is True
+        assert _parse_bool("   ", default=False) is False
+
+    def test_none_uses_default(self):
+        assert _parse_bool(None, default=True) is True
+        assert _parse_bool(None, default=False) is False
+
+
+class TestLogTlsStatus:
+    """Tests for log_tls_status()."""
+
+    def test_https_when_enabled_with_context(self, capsys, monkeypatch):
+        monkeypatch.setenv("TLS_ENABLED", "true")
+        tls = {"enabled": True, "ssl_context": ("/c.pem", "/k.pem")}
+        log_tls_status("svc", "0.0.0.0", 4200, tls)
+        err = capsys.readouterr().err
+        assert "https://0.0.0.0:4200" in err
+        assert "[svc]" in err
+        assert "cert=/c.pem" in err
+        assert "key=/k.pem" in err
+
+    def test_http_when_disabled(self, capsys, monkeypatch):
+        monkeypatch.setenv("TLS_ENABLED", "false")
+        tls = {"enabled": False, "ssl_context": None}
+        log_tls_status("svc", "0.0.0.0", 4200, tls)
+        err = capsys.readouterr().err
+        assert "http://0.0.0.0:4200" in err
+        assert "https://" not in err
+
+    def test_unset_marks_default(self, capsys, monkeypatch):
+        monkeypatch.delenv("TLS_ENABLED", raising=False)
+        tls = {"enabled": True, "ssl_context": ("/c.pem", "/k.pem")}
+        log_tls_status("svc", "0.0.0.0", 4200, tls)
+        err = capsys.readouterr().err
+        assert "unset" in err
+        assert "default: true" in err

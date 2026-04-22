@@ -10,7 +10,12 @@ When `AUTH_ENABLED=true`, MCP clients must send credentials when connecting to t
 
 ## Claude Desktop
 
-Add `headers` to your MCP server config in `claude_desktop_config.json`:
+Claude Desktop supports two connection modes depending on your plan.
+
+### Remote server (Claude Pro / Max / Team / Enterprise)
+
+Add a `url` entry to `claude_desktop_config.json`. Include `headers` when
+`AUTH_ENABLED=true`:
 
 ```json
 {
@@ -25,6 +30,8 @@ Add `headers` to your MCP server config in `claude_desktop_config.json`:
 }
 ```
 
+Use `http://` instead of `https://` when `TLS_ENABLED=false`.
+
 For API key auth:
 
 ```json
@@ -34,6 +41,30 @@ For API key auth:
   }
 }
 ```
+
+### stdio proxy (all plans)
+
+Claude Desktop can connect via a local proxy process that bridges stdio to the
+MCP Server over HTTP. This works on all Claude plans.
+
+The MCP Server must be running before Claude Desktop can connect.
+
+From the project root, run:
+
+```bash
+python scripts/integrate_claude_desktop.py
+```
+
+This reads your `.env` file and writes the correct Claude Desktop configuration
+automatically. Then restart Claude Desktop completely (Cmd+Q, then reopen).
+
+Re-run the command and restart Claude Desktop whenever `.env` changes — for
+example, after toggling `TLS_ENABLED` or `AUTH_ENABLED`, or rotating credentials.
+
+When `AUTH_ENABLED=true` on the MCP Server, set `ELASTICSEARCH_API_KEY` (or
+`ELASTICSEARCH_USERNAME` + `ELASTICSEARCH_PASSWORD`) in `.env`. The proxy
+injects them as the `Authorization` header on every upstream request.
+When `TLS_ENABLED=true`, also set `TLS_CERT_FILE` and `TLS_KEY_FILE` in `.env`.
 
 ## Cursor
 

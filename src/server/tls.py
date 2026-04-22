@@ -17,6 +17,7 @@ the files must exist. Otherwise startup fails with a clear error message.
 
 # Standard packages
 import os
+import sys
 from typing import Any, Dict, Optional, Tuple
 
 # Third-party packages
@@ -25,11 +26,27 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+def _strip_env(value: Optional[str]) -> str:
+    """
+    Normalize an env var value: strip whitespace and a single matching pair of
+    surrounding quotes. Some env_file parsers (notably older docker compose
+    versions) preserve quotes verbatim, which would silently break boolean and
+    path parsing downstream.
+    """
+    if value is None:
+        return ""
+    v = value.strip()
+    if len(v) >= 2 and v[0] == v[-1] and v[0] in ("'", '"'):
+        v = v[1:-1].strip()
+    return v
+
+
 def _parse_bool(value: Optional[str], default: bool = True) -> bool:
     """Parse a string as boolean. Default when empty/None."""
-    if value is None or value.strip() == "":
+    v = _strip_env(value)
+    if v == "":
         return default
-    return value.strip().lower() in ("1", "true", "yes", "on")
+    return v.lower() in ("1", "true", "yes", "on")
 
 
 def get_tls_config() -> Dict[str, Any]:
@@ -44,8 +61,8 @@ def get_tls_config() -> Dict[str, Any]:
         - error: Optional[str] - clear error message when config is invalid
     """
     enabled = _parse_bool(os.environ.get("TLS_ENABLED"), default=True)
-    cert_file = (os.environ.get("TLS_CERT_FILE") or "").strip()
-    key_file = (os.environ.get("TLS_KEY_FILE") or "").strip()
+    cert_file = _strip_env(os.environ.get("TLS_CERT_FILE"))
+    key_file = _strip_env(os.environ.get("TLS_KEY_FILE"))
 
     if not enabled:
         return {
@@ -96,3 +113,28 @@ def get_tls_config() -> Dict[str, Any]:
         "uvicorn_config": uvicorn_config,
         "error": None,
     }
+
+
+def log_tls_status(service: str, host: str, port: int, tls: Dict[str, Any]) -> None:
+    """
+    Print an unambiguous startup line describing the actual TLS state.
+
+    FastMCP's own banner hardcodes ``http://`` regardless of whether TLS is
+    configured, which makes it easy to misdiagnose a working HTTPS server as
+    HTTP. Callers should invoke this just before starting the server so the
+    log clearly reflects the resolved scheme and source of the cert files.
+    """
+    scheme = "https" if tls.get("enabled") and tls.get("ssl_context") else "http"
+    raw = os.environ.get("TLS_ENABLED")
+    if raw is None:
+        source = "unset (default: true)"
+    else:
+        source = f"{raw!r}"
+    cert = tls.get("ssl_context", (None, None))[0] if tls.get("ssl_context") else None
+    key = tls.get("ssl_context", (None, None))[1] if tls.get("ssl_context") else None
+    print(
+        f"[{service}] TLS_ENABLED={source} -> serving on {scheme}://{host}:{port}"
+        + (f" (cert={cert}, key={key})" if cert and key else ""),
+        file=sys.stderr,
+        flush=True,
+    )

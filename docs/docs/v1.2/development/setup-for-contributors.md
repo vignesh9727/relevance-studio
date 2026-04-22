@@ -81,15 +81,20 @@ Repeat steps 1 and 3 anytime you need to start the MCP Server in another termina
 
 ### Step 7. (Optional) Run the MCP Proxy for local MCP hosts
 
-In a terminal, navigate to the root-level directory of this project and run:
+The MCP Proxy bridges Claude Desktop (stdio) to the running MCP Server (HTTP).
+The MCP Server must be running (Step 5) before Claude Desktop can connect.
 
-1. Run `brew install uv` which is needed by fastmcp
-2. Run `source .venv/bin/activate` to activate the virtual environment
-3. Run `pip install -r requirements-dev.txt` to install dependencies *(skip if done in Step 2)*
-4. Run `fastmcp install claude-desktop src/server/fastmcp_proxy.py` to install the MCP Proxy in your MCP host application
-5. Restart the host application
+From the project root, run:
 
-Repeat steps 2, 4, and 5 anytime you change the MCP Proxy or need to reinstall it.
+```bash
+python scripts/integrate_claude_desktop.py
+```
+
+This reads `.env` and writes the correct entry into Claude Desktop's config
+automatically. Then restart Claude Desktop completely (Cmd+Q, then reopen).
+
+**Re-run this command and restart Claude Desktop whenever `.env` changes**
+(e.g. when you toggle TLS or AUTH).
 
 ---
 

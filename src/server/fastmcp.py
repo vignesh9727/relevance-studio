@@ -24,7 +24,7 @@ from . import api
 from . import mcp_auth
 from .mcp_auth_middleware import MCPAuthMiddleware
 from .models import *
-from .tls import get_tls_config
+from .tls import get_tls_config, log_tls_status
 
 ####  Configuration  ###########################################################
 
@@ -444,7 +444,9 @@ if __name__ == "__main__":
     if tls["error"]:
         print(tls["error"], file=sys.stderr)
         sys.exit(1)
+    host = os.environ.get("FASTMCP_HOST") or "0.0.0.0"
     port = int(os.environ.get("FASTMCP_PORT") or "4200")
+    log_tls_status("esrs-server-mcp", host, port, tls)
     transport_kwargs = {"port": port, "log_level": "debug"}
     if tls["uvicorn_config"]:
         transport_kwargs["uvicorn_config"] = tls["uvicorn_config"]

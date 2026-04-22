@@ -23,7 +23,7 @@ from . import api
 from . import auth
 from .client import _validate_endpoint_configuration, es, es_from_credentials
 from .models import *
-from .tls import get_tls_config
+from .tls import get_tls_config, log_tls_status
 
 ####  Configuration  ###########################################################
 
@@ -587,6 +587,7 @@ if __name__ == "__main__":
     host = os.environ.get("FLASK_RUN_HOST") or "0.0.0.0"
     port = int(os.environ.get("FLASK_RUN_PORT") or "4096")
     debug = os.environ.get("FLASK_ENV") == "development"
+    log_tls_status("esrs-server", host, port, tls)
     app.run(
         host=host,
         port=port,
