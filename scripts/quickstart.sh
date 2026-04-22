@@ -431,6 +431,12 @@ validate_args() {
     fi
   fi
 
+  # --generate-tls-cert requires v1.2.0+ (TLS was not available in earlier versions)
+  if [[ "$ARG_GENERATE_TLS_CERT" == true ]] && ! version_supports_tls_auth; then
+    print_error "--generate-tls-cert requires v1.2.0 or later (requested: $VERSION)"
+    errors=true
+  fi
+
   if [[ "$errors" == true ]]; then
     echo ""
     exit 1
@@ -735,6 +741,22 @@ has_otel_args() {
   [[ -n "$ARG_OTEL_RESOURCE_ATTRIBUTES" ]]
 }
 
+# Returns true (0) if the requested version supports TLS and AUTH (introduced in v1.2.0).
+# latest and main are always considered to support these features.
+version_supports_tls_auth() {
+  if [[ "$VERSION" == "latest" ]] || [[ "$VERSION" == "main" ]]; then
+    return 0
+  fi
+  local ver="${VERSION#v}"
+  local major minor
+  major="$(echo "$ver" | cut -d. -f1)"
+  minor="$(echo "$ver" | cut -d. -f2)"
+  if [[ "$major" -gt 1 ]] || { [[ "$major" -eq 1 ]] && [[ "$minor" -ge 2 ]]; }; then
+    return 0
+  fi
+  return 1
+}
+
 configure_env() {
   local env_file="$INSTALL_DIR/.env"
   local env_reference="$INSTALL_DIR/.env-reference"
@@ -911,35 +933,39 @@ configure_env() {
   fi
   
   # --- TLS (optional self-signed cert for local dev) ---
-  if [[ "$ARG_GENERATE_TLS_CERT" == true ]]; then
-    generate_tls_cert "$INSTALL_DIR" "$env_file" "false"
-  elif ! has_studio_args; then
-    print_divider
-    print_info "${BOLD}TLS${RESET} ${DIM}(optional, for HTTPS)${RESET}"
-    print_divider
-    echo ""
+  # TLS support was introduced in v1.2.0; skip entirely for older versions.
+  if version_supports_tls_auth; then
+    if [[ "$ARG_GENERATE_TLS_CERT" == true ]]; then
+      generate_tls_cert "$INSTALL_DIR" "$env_file" "false"
+    elif ! has_studio_args; then
+      print_divider
+      print_info "${BOLD}TLS${RESET} ${DIM}(optional, for HTTPS)${RESET}"
+      print_divider
+      echo ""
 
-    if prompt_yes_no "Enable TLS for Studio deployment (Server and MCP Server)?" "y"; then
-      set_env_value "TLS_ENABLED" "true" "$env_file"
-      set_compose_tls_enabled "$INSTALL_DIR" "true"
+      if prompt_yes_no "Enable TLS for Studio deployment (Server and MCP Server)?" "y"; then
+        set_env_value "TLS_ENABLED" "true" "$env_file"
+        set_compose_tls_enabled "$INSTALL_DIR" "true"
 
-      if prompt_yes_no "Auto-generate self-signed certs in .certs/?" "y"; then
-        generate_tls_cert "$INSTALL_DIR" "$env_file" "true"
+        if prompt_yes_no "Auto-generate self-signed certs in .certs/?" "y"; then
+          generate_tls_cert "$INSTALL_DIR" "$env_file" "true"
+        else
+          set_env_value "TLS_CERT_FILE" "$(prompt_value "TLS_CERT_FILE path" ".certs/cert.pem")" "$env_file"
+          set_env_value "TLS_KEY_FILE" "$(prompt_value "TLS_KEY_FILE path" ".certs/key.pem")" "$env_file"
+          print_success "TLS enabled with provided certificate paths"
+        fi
       else
-        set_env_value "TLS_CERT_FILE" "$(prompt_value "TLS_CERT_FILE path" ".certs/cert.pem")" "$env_file"
-        set_env_value "TLS_KEY_FILE" "$(prompt_value "TLS_KEY_FILE path" ".certs/key.pem")" "$env_file"
-        print_success "TLS enabled with provided certificate paths"
+        set_env_value "TLS_ENABLED" "false" "$env_file"
+        set_compose_tls_enabled "$INSTALL_DIR" "false"
+        print_info "TLS disabled (HTTP)."
       fi
-    else
-      set_env_value "TLS_ENABLED" "false" "$env_file"
-      set_compose_tls_enabled "$INSTALL_DIR" "false"
-      print_info "TLS disabled (HTTP)."
+      echo ""
     fi
-    echo ""
   fi
 
   # --- Authentication (optional) ---
-  if ! has_studio_args; then
+  # Authentication support was introduced in v1.2.0; skip entirely for older versions.
+  if version_supports_tls_auth && ! has_studio_args; then
     print_divider
     print_info "${BOLD}Authentication${RESET} ${DIM}(optional, recommended for production)${RESET}"
     print_divider

@@ -1221,3 +1221,136 @@ class TestUninstall:
         assert "Uninstalling" in result.stdout
         assert "Uninstall complete" in result.stdout
         assert "esrs-*" in result.stdout
+
+
+# =============================================================================
+# Version-gated features — TLS and AUTH skipped for pre-v1.2.0 versions
+# =============================================================================
+
+class TestVersionGatedFeatures:
+    """TLS and AUTH configuration must be skipped for versions before v1.2.0."""
+
+    def test_tls_and_auth_not_set_for_v1_0_0(self, seeded_dir, fake_bin):
+        """On v1.0.0, TLS_ENABLED and AUTH_ENABLED must not be written to .env."""
+        result = run_quickstart([
+            "--version", "v1.0.0",
+            "--studio-elasticsearch-url", "http://localhost:9200",
+            "--studio-elasticsearch-api-key", "key",
+            "--no-separate-content-deployment",
+        ], fake_bin, seeded_dir)
+        assert result.returncode == 0
+        env = read_env(seeded_dir)
+        assert env.get("TLS_ENABLED", "") == ""
+        assert env.get("TLS_CERT_FILE", "") == ""
+        assert env.get("TLS_KEY_FILE", "") == ""
+        assert env.get("AUTH_ENABLED", "") == ""
+        assert env.get("AUTH_JWT_SECRET", "") == ""
+
+    def test_tls_and_auth_not_set_for_v1_1_0(self, seeded_dir, fake_bin):
+        """On v1.1.0, TLS_ENABLED and AUTH_ENABLED must not be written to .env."""
+        result = run_quickstart([
+            "--version", "v1.1.0",
+            "--studio-elasticsearch-url", "http://localhost:9200",
+            "--studio-elasticsearch-api-key", "key",
+            "--no-separate-content-deployment",
+        ], fake_bin, seeded_dir)
+        assert result.returncode == 0
+        env = read_env(seeded_dir)
+        assert env.get("TLS_ENABLED", "") == ""
+        assert env.get("AUTH_ENABLED", "") == ""
+
+    def test_tls_and_auth_not_set_for_v1_1_1(self, seeded_dir, fake_bin):
+        """On v1.1.1, TLS_ENABLED and AUTH_ENABLED must not be written to .env."""
+        result = run_quickstart([
+            "--version", "v1.1.1",
+            "--studio-elasticsearch-url", "http://localhost:9200",
+            "--studio-elasticsearch-api-key", "key",
+            "--no-separate-content-deployment",
+        ], fake_bin, seeded_dir)
+        assert result.returncode == 0
+        env = read_env(seeded_dir)
+        assert env.get("TLS_ENABLED", "") == ""
+        assert env.get("AUTH_ENABLED", "") == ""
+
+    def test_generate_tls_cert_rejected_for_v1_0_0(self, seeded_dir, fake_bin):
+        """--generate-tls-cert must fail with a clear error on v1.0.0."""
+        write_fake_openssl(fake_bin)
+        result = run_quickstart([
+            "--version", "v1.0.0",
+            "--studio-elasticsearch-url", "http://localhost:9200",
+            "--studio-elasticsearch-api-key", "key",
+            "--no-separate-content-deployment",
+            "--generate-tls-cert",
+        ], fake_bin, seeded_dir)
+        assert result.returncode != 0
+        assert "v1.2.0" in result.stderr
+        assert "v1.0.0" in result.stderr
+
+    def test_generate_tls_cert_rejected_for_v1_1_0(self, seeded_dir, fake_bin):
+        """--generate-tls-cert must fail with a clear error on v1.1.0."""
+        write_fake_openssl(fake_bin)
+        result = run_quickstart([
+            "--version", "v1.1.0",
+            "--studio-elasticsearch-url", "http://localhost:9200",
+            "--studio-elasticsearch-api-key", "key",
+            "--no-separate-content-deployment",
+            "--generate-tls-cert",
+        ], fake_bin, seeded_dir)
+        assert result.returncode != 0
+        assert "v1.2.0" in result.stderr
+        assert "v1.1.0" in result.stderr
+
+    def test_tls_and_auth_configured_for_v1_2_0(self, seeded_dir, fake_bin):
+        """On v1.2.0, TLS and AUTH prompts must still run in interactive mode."""
+        write_fake_openssl(fake_bin)
+        # 2=URL, blank=default URL, auth-required=y, 1=API key, content=n,
+        # OTel=n, TLS=y, auto-generate=y, trust=n, auth=y
+        stdin_input = "\n".join([
+            "2", "", "y", "1", "api-key-123",
+            "", "", "", "", "", "",
+        ]) + "\n"
+        result = run_quickstart_interactive(
+            ["--version", "v1.2.0"], fake_bin, seeded_dir, stdin_input=stdin_input
+        )
+        assert result.returncode == 0
+        env = read_env(seeded_dir)
+        assert env["TLS_ENABLED"] == "true"
+        assert env["AUTH_ENABLED"] == "true"
+
+    def test_tls_and_auth_not_prompted_in_interactive_mode_for_v1_1_0(self, seeded_dir, fake_bin):
+        """Interactive mode on v1.1.0 must not show TLS or AUTH section prompts."""
+        write_fake_openssl(fake_bin)
+        # Fewer prompts needed (no TLS/AUTH): URL, default URL, auth=y, API key,
+        # content=n, OTel=n — then EOF
+        stdin_input = "\n".join([
+            "2", "", "y", "1", "api-key-123",
+            "", "",
+        ]) + "\n"
+        result = run_quickstart_interactive(
+            ["--version", "v1.1.0"], fake_bin, seeded_dir, stdin_input=stdin_input
+        )
+        assert result.returncode == 0
+        # The TLS section header and the auth section header must not appear.
+        # ("Authentication" alone also appears in the studio connection preamble
+        # and prompt, which are correct for all versions.)
+        assert "TLS" not in result.stdout
+        assert "optional, recommended for production" not in result.stdout
+        assert "Enable authentication for Server and MCP Server" not in result.stdout
+        env = read_env(seeded_dir)
+        assert env.get("TLS_ENABLED", "") == ""
+        assert env.get("AUTH_ENABLED", "") == ""
+
+    def test_tls_and_auth_configured_for_latest(self, seeded_dir, fake_bin):
+        """latest version must still configure TLS and AUTH (latest >= v1.2.0)."""
+        write_fake_openssl(fake_bin)
+        stdin_input = "\n".join([
+            "2", "", "y", "1", "api-key-123",
+            "", "", "", "", "", "",
+        ]) + "\n"
+        result = run_quickstart_interactive(
+            ["--version", "latest"], fake_bin, seeded_dir, stdin_input=stdin_input
+        )
+        assert result.returncode == 0
+        env = read_env(seeded_dir)
+        assert env["TLS_ENABLED"] == "true"
+        assert env["AUTH_ENABLED"] == "true"
