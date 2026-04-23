@@ -1,5 +1,18 @@
 # Release notes
 
+## v1.2.2
+
+### Improvements
+
+- Hardened TLS/auth defaults: fail fast on bad TLS in stdio proxy, auto-generate `AUTH_JWT_SECRET` in non-interactive installs, and documented plaintext credential storage. ([113e6cf](https://github.com/elastic/relevance-studio/commit/113e6cf))
+- Added stdio MCP proxy with Claude Desktop integration script and TLS-aware upstream forwarding. ([b77f659](https://github.com/elastic/relevance-studio/commit/b77f659))
+
+### Bug fixes
+
+- Fixed bug when fresh install prompts for upgrade instead of setup. ([94ef73f](https://github.com/elastic/relevance-studio/commit/94ef73f))
+- Fixed an issue where TLS and AUTH configuration prompts were shown for versions before v1.2.0. ([a06611f](https://github.com/elastic/relevance-studio/commit/a06611f))
+- Fixed login redirect loop when `AUTH_ENABLED=false`. ([dbf10ae](https://github.com/elastic/relevance-studio/commit/dbf10ae))
+
 ## v1.2.1
 
 ### Bug fixes
