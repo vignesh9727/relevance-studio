@@ -72,28 +72,30 @@ The recommended role for the [studio deployment](docs/{{VERSION}}/reference/arch
 
 ```json
 {
-  "cluster": [
-    "manage_index_templates",
-    "manage_own_api_key",
-    "monitor",
-    "monitor_inference"
-  ],
-  "indices": [
-    {
-      "names": [
-        "esrs-*"
-      ],
-      "privileges": [
-        "all"
-      ],
-      "field_security": {
-        "grant": [
-          "*"
+  "esrs-studio-role": {
+    "cluster": [
+      "manage_index_templates",
+      "manage_own_api_key",
+      "monitor",
+      "monitor_inference"
+    ],
+    "indices": [
+      {
+        "names": [
+          "esrs-*"
         ],
-        "except": []
+        "privileges": [
+          "all"
+        ],
+        "field_security": {
+          "grant": [
+            "*"
+          ],
+          "except": []
+        }
       }
-    }
-  ]
+    ]
+  }
 }
 ```
 
@@ -103,28 +105,30 @@ The recommended role for the [content deployment](docs/{{VERSION}}/reference/arc
 
 ```json
 {
-  "cluster": [
-    "monitor"
-  ],
-  "indices": [
-    {
-      "names": [
-        "*"
-      ],
-      "privileges": [
-        "read",
-        "view_index_metadata",
-        "monitor"
-      ],
-      "field_security": {
-        "grant": [
-          "*"
+  "esrs-content-role": {
+    "cluster": [
+      "monitor"
+    ],
+    "indices": [
+      {
+        "names": [
+          "esrs-*"
         ],
-        "except": []
-      },
-      "allow_restricted_indices": false
-    }
-  ]
+        "privileges": [
+          "read",
+          "view_index_metadata",
+          "monitor"
+        ],
+        "field_security": {
+          "grant": [
+            "*"
+          ],
+          "except": []
+        },
+        "allow_restricted_indices": false
+      }
+    ]
+  }
 }
 ```
 
@@ -134,28 +138,30 @@ The recommended role for the evaluation worker and service account (below) grant
 
 ```json
 {
-  "cluster": [
-    "monitor"
-  ],
-  "indices": [
-    {
-      "names": [
-        "esrs-*"
-      ],
-      "privileges": [
-        "read",
-        "write",
-        "view_index_metadata",
-        "monitor"
-      ],
-      "field_security": {
-        "grant": [
-          "*"
+  "esrs-worker-role": {
+    "cluster": [
+      "monitor"
+    ],
+    "indices": [
+      {
+        "names": [
+          "esrs-*"
         ],
-        "except": []
+        "privileges": [
+          "read",
+          "write",
+          "view_index_metadata",
+          "monitor"
+        ],
+        "field_security": {
+          "grant": [
+            "*"
+          ],
+          "except": []
+        }
       }
-    }
-  ]
+    ]
+  }
 }
 ```
 
