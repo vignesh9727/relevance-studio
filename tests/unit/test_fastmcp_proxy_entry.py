@@ -114,3 +114,64 @@ class TestMainBlock:
         with patch.object(mod.mcp, "run", side_effect=lambda **kw: calls.append(kw)):
             mod.mcp.run()
         assert calls == [{}]
+
+
+####  TLS misconfiguration  ####################################################
+
+
+def _import_entry_fresh(monkeypatch, env: dict):
+    """
+    Like _import_entry, but forces a fresh evaluation of both
+    server.fastmcp_proxy AND fastmcp_proxy_entry so module-scope side effects
+    (like the TLS error guard) re-run with the updated env.
+
+    importlib.reload() on the entry module alone is not enough: its
+    `from server.fastmcp_proxy import mcp` finds the proxy module already in
+    sys.modules and skips re-evaluation, masking the SystemExit we're testing.
+    """
+    for k, v in env.items():
+        if v is None:
+            monkeypatch.delenv(k, raising=False)
+        else:
+            monkeypatch.setenv(k, v)
+    sys.modules.pop("server.fastmcp_proxy", None)
+    sys.modules.pop("fastmcp_proxy_entry", None)
+    import fastmcp_proxy_entry as mod
+    return mod
+
+
+class TestTlsMisconfiguration:
+    """
+    The stdio entry point must fail fast — with the same clear error message
+    that get_tls_config() produces — when TLS_ENABLED=true but the cert/key
+    files are missing or invalid. Without this, Claude Desktop would launch
+    the proxy successfully and surface opaque ssl.SSLCertVerificationError on
+    the first tool call.
+    """
+
+    def test_missing_cert_file_exits_at_import_with_clear_error(self, monkeypatch, capsys):
+        with pytest.raises(SystemExit) as exc_info:
+            _import_entry_fresh(
+                monkeypatch,
+                {"TLS_ENABLED": "true", "TLS_CERT_FILE": "", "TLS_KEY_FILE": ""},
+            )
+        assert exc_info.value.code == 1
+        captured = capsys.readouterr()
+        assert "TLS_CERT_FILE" in captured.err
+
+    def test_nonexistent_cert_file_exits_at_import_with_clear_error(
+        self, monkeypatch, capsys, tmp_path
+    ):
+        bogus = tmp_path / "does-not-exist.pem"
+        with pytest.raises(SystemExit) as exc_info:
+            _import_entry_fresh(
+                monkeypatch,
+                {
+                    "TLS_ENABLED": "true",
+                    "TLS_CERT_FILE": str(bogus),
+                    "TLS_KEY_FILE": str(bogus),
+                },
+            )
+        assert exc_info.value.code == 1
+        captured = capsys.readouterr()
+        assert str(bogus) in captured.err

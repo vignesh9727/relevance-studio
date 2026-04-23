@@ -107,14 +107,24 @@ def _ssl_httpx_factory(verify):
 ####  Build proxy  #############################################################
 
 _tls = get_tls_config()
+
+# Fail fast on invalid TLS config at import time. This must run at module scope
+# (not just in __main__) because the stdio entry point imports ``mcp`` from this
+# module without ever entering this file's __main__ block. Without this check,
+# a misconfigured TLS_CERT_FILE/TLS_KEY_FILE would silently fall back to the
+# system CA bundle and surface as opaque certificate-verify errors at the
+# first tool call instead of the clear, actionable message produced by
+# get_tls_config().
+if _tls["error"]:
+    print(_tls["error"], file=sys.stderr)
+    sys.exit(1)
+
 _upstream = _upstream_url()
 _headers = _static_auth_headers()
 
 if _tls["enabled"]:
     # Use TLS_CERT_FILE as the CA bundle so self-signed certs are accepted.
-    # ssl_context is None only when the config is invalid (missing/bad file);
-    # startup in __main__ will catch and report that error before any calls.
-    _verify = _tls["ssl_context"][0] if _tls["ssl_context"] else True
+    _verify = _tls["ssl_context"][0]
     _transport = StreamableHttpTransport(
         _upstream,
         headers=_headers,
@@ -129,11 +139,6 @@ mcp = FastMCP.as_proxy(ProxyClient(_transport), name="Relevance Studio")
 ####  Main  ####################################################################
 
 if __name__ == "__main__":
-    tls = get_tls_config()
-    if tls["error"]:
-        print(tls["error"], file=sys.stderr)
-        sys.exit(1)
-
     server_transport = os.environ.get("FASTMCP_SERVER_TRANSPORT", "stdio").strip().lower()
 
     if server_transport == "http":
@@ -141,10 +146,10 @@ if __name__ == "__main__":
         # Keep it separate from FASTMCP_PORT (the upstream MCP server port).
         host = os.environ.get("FASTMCP_HOST") or "0.0.0.0"
         port = int(os.environ.get("FASTMCP_PROXY_PORT") or "4201")
-        log_tls_status("esrs-proxy-mcp", host, port, tls)
+        log_tls_status("esrs-proxy-mcp", host, port, _tls)
         transport_kwargs: dict = {"port": port, "log_level": "debug"}
-        if tls["uvicorn_config"]:
-            transport_kwargs["uvicorn_config"] = tls["uvicorn_config"]
+        if _tls["uvicorn_config"]:
+            transport_kwargs["uvicorn_config"] = _tls["uvicorn_config"]
         mcp.run(transport="http", **transport_kwargs)
     else:
         mcp.run()

@@ -757,6 +757,23 @@ version_supports_tls_auth() {
   return 1
 }
 
+# Generate a 32-byte (64 hex char) random JWT signing secret.
+# Tries openssl first, then falls back to /dev/urandom via od so that
+# non-interactive installs always succeed even when openssl is absent.
+# Both `od -N 32` and `tr -d` consume bounded input and exit cleanly, so
+# there's no SIGPIPE risk under `set -o pipefail`. Echoes the secret on
+# stdout, or empty string if all sources fail.
+generate_jwt_secret() {
+  local secret=""
+  if command_exists openssl; then
+    secret="$(openssl rand -hex 32 2>/dev/null || true)"
+  fi
+  if [[ -z "$secret" ]] && [[ -r /dev/urandom ]] && command_exists od; then
+    secret="$(od -An -vtx1 -N 32 /dev/urandom 2>/dev/null | tr -d ' \n' || true)"
+  fi
+  echo "$secret"
+}
+
 configure_env() {
   local env_file="$INSTALL_DIR/.env"
   local env_reference="$INSTALL_DIR/.env-reference"
@@ -965,37 +982,54 @@ configure_env() {
 
   # --- Authentication (optional) ---
   # Authentication support was introduced in v1.2.0; skip entirely for older versions.
-  if version_supports_tls_auth && ! has_studio_args; then
-    print_divider
-    print_info "${BOLD}Authentication${RESET} ${DIM}(optional, recommended for production)${RESET}"
-    print_divider
-    echo ""
-    
-    if prompt_yes_no "Enable authentication for Server and MCP Server?" "y"; then
+  if version_supports_tls_auth; then
+    if has_studio_args; then
+      # CLI / programmatic mode: AUTH_ENABLED defaults to true in the server
+      # code, so a non-interactive install MUST also write a valid AUTH_JWT_SECRET
+      # — otherwise the server crashes at startup with
+      # "AUTH_JWT_SECRET must be set when AUTH_ENABLED is true".
+      # Users who want auth disabled can edit .env post-install.
+      local jwt_secret
+      jwt_secret="$(generate_jwt_secret)"
+      if [[ -z "$jwt_secret" ]]; then
+        print_error "Failed to auto-generate AUTH_JWT_SECRET (no openssl and no /dev/urandom)."
+        print_info "Generate one manually with: openssl rand -hex 32"
+        print_info "Then set AUTH_JWT_SECRET in $env_file before starting services."
+        exit 1
+      fi
       set_env_value "AUTH_ENABLED" "true" "$env_file"
-      if command_exists openssl; then
+      set_env_value "AUTH_JWT_SECRET" "$jwt_secret" "$env_file"
+      set_env_value "AUTH_SESSION_EXPIRY" "24h" "$env_file"
+      print_success "Authentication enabled (AUTH_JWT_SECRET auto-generated)"
+      echo ""
+    else
+      print_divider
+      print_info "${BOLD}Authentication${RESET} ${DIM}(optional, recommended for production)${RESET}"
+      print_divider
+      echo ""
+
+      if prompt_yes_no "Enable authentication for Server and MCP Server?" "y"; then
+        set_env_value "AUTH_ENABLED" "true" "$env_file"
         local jwt_secret
-        jwt_secret="$(openssl rand -hex 32 2>/dev/null)"
+        jwt_secret="$(generate_jwt_secret)"
         if [[ -n "$jwt_secret" ]]; then
           set_env_value "AUTH_JWT_SECRET" "$jwt_secret" "$env_file"
           print_success "AUTH_JWT_SECRET auto-generated"
         else
           set_env_value "AUTH_JWT_SECRET" "$(prompt_secret "AUTH_JWT_SECRET (generate with: openssl rand -hex 32)")" "$env_file"
         fi
+        set_env_value "AUTH_SESSION_EXPIRY" "24h" "$env_file"
+        print_success "Authentication enabled"
       else
-        set_env_value "AUTH_JWT_SECRET" "$(prompt_secret "AUTH_JWT_SECRET (generate with: openssl rand -hex 32)")" "$env_file"
+        set_env_value "AUTH_ENABLED" "false" "$env_file"
+        # In auth-disabled mode, studio deployment must use no credentials.
+        clear_env_value "ELASTICSEARCH_API_KEY" "$env_file"
+        clear_env_value "ELASTICSEARCH_USERNAME" "$env_file"
+        clear_env_value "ELASTICSEARCH_PASSWORD" "$env_file"
+        print_info "Authentication disabled (no credentials sent to the studio deployment)"
       fi
-      set_env_value "AUTH_SESSION_EXPIRY" "24h" "$env_file"
-      print_success "Authentication enabled"
-    else
-      set_env_value "AUTH_ENABLED" "false" "$env_file"
-      # In auth-disabled mode, studio deployment must use no credentials.
-      clear_env_value "ELASTICSEARCH_API_KEY" "$env_file"
-      clear_env_value "ELASTICSEARCH_USERNAME" "$env_file"
-      clear_env_value "ELASTICSEARCH_PASSWORD" "$env_file"
-      print_info "Authentication disabled (no credentials sent to the studio deployment)"
+      echo ""
     fi
-    echo ""
   fi
   
   # Clean up sed backup files

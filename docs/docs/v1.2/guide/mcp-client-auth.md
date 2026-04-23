@@ -66,6 +66,25 @@ When `AUTH_ENABLED=true` on the MCP Server, set `ELASTICSEARCH_API_KEY` (or
 injects them as the `Authorization` header on every upstream request.
 When `TLS_ENABLED=true`, also set `TLS_CERT_FILE` and `TLS_KEY_FILE` in `.env`.
 
+> **⚠️ Security: Credentials are stored in plaintext**
+>
+> `integrate_claude_desktop.py` writes the credentials from your `.env` directly
+> into Claude Desktop's config file in plaintext:
+>
+> - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+> - Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+>
+> The file is protected only by your OS user account's filesystem permissions —
+> not encrypted. Treat it like any other file containing secrets:
+>
+> - **Don't share or commit** the config file or screenshots that include it.
+> - **Use a scoped Elasticsearch API key** (least-privilege, short-lived,
+>   revocable) rather than a username/password — see [Elasticsearch API keys](https://www.elastic.co/docs/deploy-manage/api-keys/elasticsearch-api-keys).
+> - **Rotate the key** if the file is ever exposed (e.g. shared screen, backup
+>   upload, malware scan finding).
+> - **Re-run** `python scripts/integrate_claude_desktop.py` after rotation so the
+>   new key is written into Claude Desktop's config.
+
 ## Cursor
 
 In Cursor's MCP settings, add the server with custom headers. Example for Basic auth:

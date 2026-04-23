@@ -436,36 +436,33 @@ class TestMain:
             mod.mcp.run(transport="http", port=port, log_level="debug")
         assert calls[0]["port"] == 4201
 
-    def test_tls_error_exits_with_code_1(self, monkeypatch):
-        """TLS misconfiguration causes sys.exit(1) before any server starts."""
+    def test_tls_error_exits_with_code_1_at_import_time(self, monkeypatch):
+        """
+        TLS misconfiguration causes sys.exit(1) at module import time, before
+        any server starts. This must happen at module scope (not just in
+        __main__) so the stdio entry point — which imports ``mcp`` rather than
+        executing fastmcp_proxy as a script — fails fast with a clear error.
+        """
         monkeypatch.setenv("TLS_ENABLED", "true")
         monkeypatch.setenv("TLS_CERT_FILE", "")
         monkeypatch.setenv("TLS_KEY_FILE", "")
         monkeypatch.setenv("MCP_SERVER_URL", "")
-        monkeypatch.setenv("FASTMCP_SERVER_TRANSPORT", "http")
 
         import server.fastmcp_proxy as mod
-        importlib.reload(mod)
-
-        tls = mod.get_tls_config()
-        assert tls["error"] is not None
         with pytest.raises(SystemExit) as exc_info:
-            if tls["error"]:
-                sys.exit(1)
+            importlib.reload(mod)
         assert exc_info.value.code == 1
 
-    def test_tls_error_message_printed_to_stderr(self, monkeypatch, capsys):
+    def test_tls_error_message_printed_to_stderr_at_import_time(self, monkeypatch, capsys):
+        """The clear error from get_tls_config() is surfaced during import."""
         monkeypatch.setenv("TLS_ENABLED", "true")
         monkeypatch.setenv("TLS_CERT_FILE", "")
         monkeypatch.setenv("TLS_KEY_FILE", "")
         monkeypatch.setenv("MCP_SERVER_URL", "")
 
         import server.fastmcp_proxy as mod
-        importlib.reload(mod)
-
-        tls = mod.get_tls_config()
-        if tls["error"]:
-            print(tls["error"], file=sys.stderr)
+        with pytest.raises(SystemExit):
+            importlib.reload(mod)
         captured = capsys.readouterr()
         assert "TLS_CERT_FILE" in captured.err
 

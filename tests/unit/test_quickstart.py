@@ -1354,3 +1354,105 @@ class TestVersionGatedFeatures:
         env = read_env(seeded_dir)
         assert env["TLS_ENABLED"] == "true"
         assert env["AUTH_ENABLED"] == "true"
+
+
+# =============================================================================
+# CLI/programmatic mode auto-generates AUTH_JWT_SECRET
+# =============================================================================
+
+class TestCliModeAuthAutoGen:
+    """
+    AUTH_ENABLED defaults to true in the server. A non-interactive (CLI) install
+    on v1.2.0+ MUST therefore write AUTH_ENABLED=true and a valid AUTH_JWT_SECRET
+    to .env, otherwise the server crashes at startup with
+    "AUTH_JWT_SECRET must be set when AUTH_ENABLED is true".
+    """
+
+    def test_auth_jwt_secret_auto_generated_for_v1_2_0_cli(self, seeded_dir, fake_bin):
+        """v1.2.0 CLI install must auto-write AUTH_ENABLED=true + a JWT secret."""
+        write_fake_openssl(fake_bin)
+        result = run_quickstart([
+            "--version", "v1.2.0",
+            "--studio-elasticsearch-url", "http://localhost:9200",
+            "--studio-elasticsearch-api-key", "key",
+            "--no-separate-content-deployment",
+        ], fake_bin, seeded_dir)
+        assert result.returncode == 0
+        env = read_env(seeded_dir)
+        assert env["AUTH_ENABLED"] == "true"
+        # Fake openssl returns "stub-jwt-secret"; in production this would be a
+        # 64-char hex string.
+        assert env["AUTH_JWT_SECRET"] == "stub-jwt-secret"
+        assert env["AUTH_SESSION_EXPIRY"] == "24h"
+
+    def test_auth_jwt_secret_auto_generated_for_latest_cli(self, seeded_dir, fake_bin):
+        """latest CLI install must auto-write AUTH_ENABLED=true + a JWT secret."""
+        write_fake_openssl(fake_bin)
+        result = run_quickstart([
+            "--version", "latest",
+            "--studio-elasticsearch-url", "http://localhost:9200",
+            "--studio-elasticsearch-api-key", "key",
+            "--no-separate-content-deployment",
+        ], fake_bin, seeded_dir)
+        assert result.returncode == 0
+        env = read_env(seeded_dir)
+        assert env["AUTH_ENABLED"] == "true"
+        assert env["AUTH_JWT_SECRET"] == "stub-jwt-secret"
+
+    def test_auth_jwt_secret_falls_back_to_urandom_when_no_openssl(
+        self, seeded_dir, fake_bin
+    ):
+        """When openssl is not on PATH, /dev/urandom must produce a usable secret."""
+        # Intentionally do NOT call write_fake_openssl(fake_bin).
+        result = run_quickstart([
+            "--version", "v1.2.0",
+            "--studio-elasticsearch-url", "http://localhost:9200",
+            "--studio-elasticsearch-api-key", "key",
+            "--no-separate-content-deployment",
+        ], fake_bin, seeded_dir)
+        assert result.returncode == 0
+        env = read_env(seeded_dir)
+        assert env["AUTH_ENABLED"] == "true"
+        secret = env["AUTH_JWT_SECRET"]
+        # /dev/urandom + tr produces a 64-char lowercase hex string.
+        assert len(secret) == 64
+        assert all(c in "0123456789abcdef" for c in secret)
+
+    def test_auth_jwt_secret_not_set_for_pre_v1_2_0_cli(self, seeded_dir, fake_bin):
+        """Pre-v1.2.0 CLI installs must still skip the AUTH section entirely."""
+        write_fake_openssl(fake_bin)
+        result = run_quickstart([
+            "--version", "v1.1.0",
+            "--studio-elasticsearch-url", "http://localhost:9200",
+            "--studio-elasticsearch-api-key", "key",
+            "--no-separate-content-deployment",
+        ], fake_bin, seeded_dir)
+        assert result.returncode == 0
+        env = read_env(seeded_dir)
+        assert env.get("AUTH_ENABLED", "") == ""
+        assert env.get("AUTH_JWT_SECRET", "") == ""
+
+    def test_auth_jwt_secret_is_unique_across_installs(self, seeded_dir, fake_bin):
+        """Without openssl, two installs must produce two different JWT secrets
+        (i.e. /dev/urandom is being read fresh, not seeded deterministically).
+        Reconfiguration is automatic in CLI mode — quickstart removes the
+        existing .env when --studio-* args are provided."""
+        result1 = run_quickstart([
+            "--version", "v1.2.0",
+            "--studio-elasticsearch-url", "http://localhost:9200",
+            "--studio-elasticsearch-api-key", "key",
+            "--no-separate-content-deployment",
+        ], fake_bin, seeded_dir)
+        assert result1.returncode == 0
+        secret1 = read_env(seeded_dir)["AUTH_JWT_SECRET"]
+
+        result2 = run_quickstart([
+            "--version", "v1.2.0",
+            "--studio-elasticsearch-url", "http://localhost:9200",
+            "--studio-elasticsearch-api-key", "key",
+            "--no-separate-content-deployment",
+        ], fake_bin, seeded_dir)
+        assert result2.returncode == 0
+        secret2 = read_env(seeded_dir)["AUTH_JWT_SECRET"]
+
+        assert secret1 != secret2
