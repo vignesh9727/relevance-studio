@@ -4,6 +4,16 @@ import subprocess
 import time
 from typing import Any, Dict, Generator, Union
 
+# Disable TLS by default for the entire test session so that importing
+# ``server.fastmcp_proxy`` (which validates TLS config at module scope and
+# calls ``sys.exit(1)`` when invalid) does not abort pytest collection in
+# environments without a configured cert/key (e.g. GitHub Actions, fresh
+# clones with no .env file). Tests that need to exercise TLS-enabled paths
+# override these via ``monkeypatch.setenv`` and reload the module. Set with
+# ``setdefault`` so a developer running locally with TLS intentionally
+# enabled is not silently overridden.
+os.environ.setdefault("TLS_ENABLED", "false")
+
 # Third-party packages
 import pytest
 import requests

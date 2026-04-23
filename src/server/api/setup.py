@@ -506,13 +506,25 @@ def _has_upgrade_only_setup_failures(setup_state: Dict[str, Any], upgrade_state:
     if not isinstance(upgrade_state, dict) or not upgrade_state.get("upgrade_needed"):
         return False
 
-    pending_steps = upgrade_state.get("pending_steps", [])
-    upgrade_targets = set()
+    pending_steps = upgrade_state.get("pending_steps", []) or []
+    # Any pending step calls put_index_template, so a missing template is
+    # fixable by the upgrade flow if any pending step targets that template.
+    template_fixable: set = set()
+    # Only `create_template` steps create the underlying index; `update_template`
+    # only writes mappings if the index already exists. So a missing index is
+    # only fixable by the upgrade flow if a `create_template` step targets it.
+    index_fixable: set = set()
     for step in pending_steps:
-        template_name = step.get("template") if isinstance(step, dict) else None
-        if template_name:
-            upgrade_targets.add(template_name)
-    if not upgrade_targets:
+        if not isinstance(step, dict):
+            continue
+        template_name = step.get("template")
+        if not template_name:
+            continue
+        template_fixable.add(template_name)
+        if step.get("action") == "create_template":
+            index_fixable.add(template_name)
+
+    if not template_fixable:
         return False
 
     for request in setup_state.get("requests", []):
@@ -522,8 +534,13 @@ def _has_upgrade_only_setup_failures(setup_state: Dict[str, Any], upgrade_state:
         status = response.get("status") if isinstance(response, dict) else None
         if status is None or status < 400:
             continue
-        target = request.get("index_template") or request.get("index")
-        if target not in upgrade_targets:
+        if "index_template" in request:
+            if request.get("index_template") not in template_fixable:
+                return False
+        elif "index" in request:
+            if request.get("index") not in index_fixable:
+                return False
+        else:
             return False
     return True
 

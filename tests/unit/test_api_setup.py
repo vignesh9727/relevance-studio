@@ -267,8 +267,8 @@ def test_has_upgrade_only_setup_failures_true_when_all_failures_in_pending_upgra
     upgrade_state = {
         "upgrade_needed": True,
         "pending_steps": [
-            {"template": "esrs-conversations"},
-            {"template": "esrs-workspaces"},
+            {"template": "esrs-conversations", "action": "create_template"},
+            {"template": "esrs-workspaces", "action": "update_template"},
         ],
     }
     assert setup._has_upgrade_only_setup_failures(setup_state, upgrade_state) is True
@@ -284,9 +284,69 @@ def test_has_upgrade_only_setup_failures_false_when_any_failure_is_not_upgrade_r
     }
     upgrade_state = {
         "upgrade_needed": True,
-        "pending_steps": [{"template": "esrs-conversations"}],
+        "pending_steps": [{"template": "esrs-conversations", "action": "create_template"}],
     }
     assert setup._has_upgrade_only_setup_failures(setup_state, upgrade_state) is False
+
+
+def test_has_upgrade_only_setup_failures_false_for_fresh_install():
+    """On a fresh deployment, every template and index is missing. Pending
+    upgrade steps reference all templates, but most are `update_template`
+    steps that won't create the missing indices. The Setup prompt (not the
+    Upgrade prompt) should win in this scenario.
+    """
+    templates = [
+        "esrs-conversations",
+        "esrs-workspaces",
+        "esrs-displays",
+        "esrs-scenarios",
+        "esrs-judgements",
+        "esrs-strategies",
+        "esrs-benchmarks",
+        "esrs-evaluations",
+    ]
+    requests = []
+    for name in templates:
+        requests.append({"index_template": name, "response": {"status": 404}})
+        requests.append({"index": name, "response": {"status": 404}})
+    setup_state = {"failures": len(templates) * 2, "requests": requests}
+    pending_steps = [
+        {"template": "esrs-conversations", "action": "create_template"},
+    ] + [
+        {"template": name, "action": "update_template"}
+        for name in templates
+    ]
+    upgrade_state = {"upgrade_needed": True, "pending_steps": pending_steps}
+
+    assert setup._has_upgrade_only_setup_failures(setup_state, upgrade_state) is False
+
+
+def test_has_upgrade_only_setup_failures_false_when_missing_index_only_has_update_step():
+    setup_state = {
+        "failures": 1,
+        "requests": [
+            {"index": "esrs-workspaces", "response": {"status": 404}},
+        ],
+    }
+    upgrade_state = {
+        "upgrade_needed": True,
+        "pending_steps": [{"template": "esrs-workspaces", "action": "update_template"}],
+    }
+    assert setup._has_upgrade_only_setup_failures(setup_state, upgrade_state) is False
+
+
+def test_has_upgrade_only_setup_failures_true_when_missing_template_has_update_step():
+    setup_state = {
+        "failures": 1,
+        "requests": [
+            {"index_template": "esrs-workspaces", "response": {"status": 404}},
+        ],
+    }
+    upgrade_state = {
+        "upgrade_needed": True,
+        "pending_steps": [{"template": "esrs-workspaces", "action": "update_template"}],
+    }
+    assert setup._has_upgrade_only_setup_failures(setup_state, upgrade_state) is True
 
 
 def test_check_includes_upgrade_only_setup_failures_flag(monkeypatch):
@@ -294,7 +354,10 @@ def test_check_includes_upgrade_only_setup_failures_flag(monkeypatch):
     cluster_info.meta.headers = {}
     license_info = _Response({"license": {"type": "enterprise", "status": "active"}})
     setup_state = {"failures": 1, "requests": [{"index_template": "esrs-conversations", "response": {"status": 404}}]}
-    upgrade_state = {"upgrade_needed": True, "pending_steps": [{"template": "esrs-conversations"}]}
+    upgrade_state = {
+        "upgrade_needed": True,
+        "pending_steps": [{"template": "esrs-conversations", "action": "create_template"}],
+    }
 
     monkeypatch.setattr(setup, "get_cluster_info", lambda es_client=None: cluster_info)
     monkeypatch.setattr(setup, "get_license_info", lambda es_client=None: license_info)
