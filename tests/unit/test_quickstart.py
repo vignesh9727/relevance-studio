@@ -238,7 +238,7 @@ def write_fake_openssl(fake_bin: Path):
     fake_openssl.write_text(
         "#!/usr/bin/env bash\n"
         "if [[ \"$1\" == \"rand\" ]]; then\n"
-        "  echo \"stub-jwt-secret\"\n"
+        "  echo \"0000000000000000000000000000000000000000000000000000000000000000\"\n"
         "  exit 0\n"
         "fi\n"
         "if [[ \"$1\" == \"req\" ]]; then\n"
@@ -1022,7 +1022,7 @@ class TestInteractiveTlsAuth:
         assert env["TLS_CERT_FILE"] == ".certs/cert.pem"
         assert env["TLS_KEY_FILE"] == ".certs/key.pem"
         assert env["AUTH_ENABLED"] == "true"
-        assert env["AUTH_JWT_SECRET"] == "stub-jwt-secret"
+        assert env["AUTH_JWT_SECRET"] == "0000000000000000000000000000000000000000000000000000000000000000"
         assert env["AUTH_SESSION_EXPIRY"] == "24h"
         assert (seeded_dir / ".certs" / "cert.pem").exists()
         assert (seeded_dir / ".certs" / "key.pem").exists()
@@ -1382,7 +1382,7 @@ class TestCliModeAuthAutoGen:
         assert env["AUTH_ENABLED"] == "true"
         # Fake openssl returns "stub-jwt-secret"; in production this would be a
         # 64-char hex string.
-        assert env["AUTH_JWT_SECRET"] == "stub-jwt-secret"
+        assert env["AUTH_JWT_SECRET"] == "0000000000000000000000000000000000000000000000000000000000000000"
         assert env["AUTH_SESSION_EXPIRY"] == "24h"
 
     def test_auth_jwt_secret_auto_generated_for_latest_cli(self, seeded_dir, fake_bin):
@@ -1397,7 +1397,7 @@ class TestCliModeAuthAutoGen:
         assert result.returncode == 0
         env = read_env(seeded_dir)
         assert env["AUTH_ENABLED"] == "true"
-        assert env["AUTH_JWT_SECRET"] == "stub-jwt-secret"
+        assert env["AUTH_JWT_SECRET"] == "0000000000000000000000000000000000000000000000000000000000000000"
 
     def test_auth_jwt_secret_falls_back_to_urandom_when_no_openssl(
         self, seeded_dir, fake_bin

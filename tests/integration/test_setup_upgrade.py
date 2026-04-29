@@ -156,28 +156,33 @@ def test_upgrade_applies_workspace_mapping_additions(services):
 
 
 def test_workspaces_crud_with_explicit_es_client(services, clean_data):
-    """Verify workspaces API accepts optional es_client and uses it when provided."""
+    """Verify workspaces API uses the request-scoped client when set."""
     from server.api import workspaces
+    from server.client import set_request_clients
 
     es_client = services["es"]
-    doc = {
-        "name": "test-ws",
-        "index_pattern": "test-*",
-        "params": ["query"],
-        "rating_scale": {"min": 0, "max": 3},
-        "tags": [],
-    }
-    created = workspaces.create(doc, user="test", es_client=es_client)
-    _id = created.body.get("_id") if hasattr(created, "body") else created.get("_id")
-    assert _id
+    set_request_clients(es_client)
+    try:
+        doc = {
+            "name": "test-ws",
+            "index_pattern": "test-*",
+            "params": ["query"],
+            "rating_scale": {"min": 0, "max": 3},
+            "tags": [],
+        }
+        created = workspaces.create(doc, user="test")
+        _id = created.body.get("_id") if hasattr(created, "body") else created.get("_id")
+        assert _id
 
-    got = workspaces.get(_id, es_client=es_client)
-    src = got.body.get("_source", {}) if hasattr(got, "body") else got.get("_source", {})
-    assert src.get("name") == "test-ws"
+        got = workspaces.get(_id)
+        src = got.body.get("_source", {}) if hasattr(got, "body") else got.get("_source", {})
+        assert src.get("name") == "test-ws"
 
-    workspaces.update(_id, {"name": "updated-ws"}, user="test", es_client=es_client)
-    got2 = workspaces.get(_id, es_client=es_client)
-    src2 = got2.body.get("_source", {}) if hasattr(got2, "body") else got2.get("_source", {})
-    assert src2.get("name") == "updated-ws"
+        workspaces.update(_id, {"name": "updated-ws"}, user="test")
+        got2 = workspaces.get(_id)
+        src2 = got2.body.get("_source", {}) if hasattr(got2, "body") else got2.get("_source", {})
+        assert src2.get("name") == "updated-ws"
 
-    workspaces.delete(_id, es_client=es_client)
+        workspaces.delete(_id)
+    finally:
+        set_request_clients(None)

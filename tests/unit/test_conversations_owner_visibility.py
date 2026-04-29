@@ -1,6 +1,7 @@
 import pytest
 from werkzeug.exceptions import Forbidden
 
+from server.client import set_request_clients
 from server import auth
 from server.api import conversations
 from server.flask import app
@@ -32,13 +33,15 @@ class MockEsClient:
 
 def test_search_applies_created_by_filter():
     client = MockEsClient(owner="alice")
-
-    conversations.search(
-        text="",
-        filters=[{"term": {"title.keyword": "chat"}}],
-        user="alice",
-        es_client=client,
-    )
+    set_request_clients(client)
+    try:
+        conversations.search(
+            text="",
+            filters=[{"term": {"title.keyword": "chat"}}],
+            user="alice",
+        )
+    finally:
+        set_request_clients(None)
 
     filters = client.last_search_body["query"]["bool"]["filter"]
     assert {"term": {"@meta.created_by": "alice"}} in filters
@@ -47,24 +50,33 @@ def test_search_applies_created_by_filter():
 
 def test_get_forbidden_when_owner_differs():
     client = MockEsClient(owner="bob")
-
-    with pytest.raises(Forbidden):
-        conversations.get("conv-1", user="alice", es_client=client)
+    set_request_clients(client)
+    try:
+        with pytest.raises(Forbidden):
+            conversations.get("conv-1", user="alice")
+    finally:
+        set_request_clients(None)
 
 
 def test_update_requires_owner_match():
     client = MockEsClient(owner="alice")
-
-    conversations.update("conv-1", {"title": "Updated"}, user="alice", es_client=client)
-    assert client.update_called is True
+    set_request_clients(client)
+    try:
+        conversations.update("conv-1", {"title": "Updated"}, user="alice")
+        assert client.update_called is True
+    finally:
+        set_request_clients(None)
 
 
 def test_delete_forbidden_when_owner_differs():
     client = MockEsClient(owner="bob")
-
-    with pytest.raises(Forbidden):
-        conversations.delete("conv-1", user="alice", es_client=client)
-    assert client.delete_called is False
+    set_request_clients(client)
+    try:
+        with pytest.raises(Forbidden):
+            conversations.delete("conv-1", user="alice")
+        assert client.delete_called is False
+    finally:
+        set_request_clients(None)
 
 
 def test_flask_conversation_get_returns_403_for_other_owner(monkeypatch):
@@ -86,7 +98,7 @@ def test_fastmcp_conversations_search_passes_user(monkeypatch):
         lambda _ctx: ("alice", object()),
     )
 
-    def mock_search(text, filters, sort, size, page, aggs, user=None, es_client=None):
+    def mock_search(text, filters, sort, size, page, aggs, user=None):
         captured["user"] = user
         return {"hits": {"hits": []}}
 

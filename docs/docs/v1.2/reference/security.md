@@ -72,7 +72,7 @@ The recommended role for the [studio deployment](docs/{{VERSION}}/reference/arch
 
 ```json
 {
-  "esrs-studio-role": {
+  "esrs-studio-user": {
     "cluster": [
       "manage_index_templates",
       "manage_own_api_key",
@@ -105,14 +105,14 @@ The recommended role for the [content deployment](docs/{{VERSION}}/reference/arc
 
 ```json
 {
-  "esrs-content-role": {
+  "esrs-content-viewer": {
     "cluster": [
       "monitor"
     ],
     "indices": [
       {
         "names": [
-          "esrs-*"
+          "*"
         ],
         "privileges": [
           "read",
@@ -138,7 +138,7 @@ The recommended role for the evaluation worker and service account (below) grant
 
 ```json
 {
-  "esrs-worker-role": {
+  "esrs-worker": {
     "cluster": [
       "monitor"
     ],

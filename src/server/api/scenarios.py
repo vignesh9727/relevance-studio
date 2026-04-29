@@ -24,7 +24,6 @@ def search(
         size: int = 10,
         page: int = 1,
         aggs: bool = False,
-        es_client: Optional["Elasticsearch"] = None,
     ) -> Dict[str, Any]:
     """Search for scenarios.
 
@@ -43,11 +42,10 @@ def search(
     response = utils.search_assets(
         "scenarios", workspace_id, text, filters, sort, size, page,
         counts=[ "judgements" ] if aggs else [],
-        es_client=es_client,
     )
     return response
 
-def tags(workspace_id: str, es_client: Optional["Elasticsearch"] = None) -> Dict[str, Any]:
+def tags(workspace_id: str) -> Dict[str, Any]:
     """List all scenario tags (up to 10,000).
 
     Args:
@@ -56,10 +54,10 @@ def tags(workspace_id: str, es_client: Optional["Elasticsearch"] = None) -> Dict
     Returns:
         The response from Elasticsearch containing tag aggregations.
     """
-    es_response = utils.search_tags("scenarios", workspace_id, es_client=es_client)
+    es_response = utils.search_tags("scenarios", workspace_id)
     return es_response
 
-def get(_id: str, es_client: Optional["Elasticsearch"] = None) -> Dict[str, Any]:
+def get(_id: str) -> Dict[str, Any]:
     """Get a scenario by its _id.
 
     Args:
@@ -68,7 +66,7 @@ def get(_id: str, es_client: Optional["Elasticsearch"] = None) -> Dict[str, Any]
     Returns:
         The scenario document from Elasticsearch.
     """
-    client = es_client if es_client is not None else es("studio")
+    client = es("studio")
     es_response = client.get(
         index=INDEX_NAME,
         id=_id,
@@ -76,7 +74,7 @@ def get(_id: str, es_client: Optional["Elasticsearch"] = None) -> Dict[str, Any]
     )
     return es_response
 
-def create(doc: Dict[str, Any], user: str = None, via: str = None, es_client: Optional["Elasticsearch"] = None) -> Dict[str, Any]:
+def create(doc: Dict[str, Any], user: str = None, via: str = None) -> Dict[str, Any]:
     """
     Create a scenario. Generates a deterministic _id for UX efficiency, and
     to prevent the creation of duplicate scenarios for the same values.
@@ -96,7 +94,7 @@ def create(doc: Dict[str, Any], user: str = None, via: str = None, es_client: Op
     doc = utils.copy_fields_to_search("scenarios", doc)
     
     # Submit
-    client = es_client if es_client is not None else es("studio")
+    client = es("studio")
     es_response = client.index(
         index=INDEX_NAME,
         id=utils.unique_id([ doc["workspace_id"], doc["values"] ]),
@@ -105,7 +103,7 @@ def create(doc: Dict[str, Any], user: str = None, via: str = None, es_client: Op
     )
     return es_response
 
-def update(_id: str, doc_partial: Dict[str, Any], user: str = None, via: str = None, es_client: Optional["Elasticsearch"] = None) -> Dict[str, Any]:
+def update(_id: str, doc_partial: Dict[str, Any], user: str = None, via: str = None) -> Dict[str, Any]:
     """Update a scenario by its _id.
 
     Args:
@@ -124,7 +122,7 @@ def update(_id: str, doc_partial: Dict[str, Any], user: str = None, via: str = N
     doc_partial = utils.copy_fields_to_search("scenarios", doc_partial)
     
     # Submit
-    client = es_client if es_client is not None else es("studio")
+    client = es("studio")
     es_response = client.update(
         index=INDEX_NAME,
         id=_id,
@@ -133,7 +131,7 @@ def update(_id: str, doc_partial: Dict[str, Any], user: str = None, via: str = N
     )
     return es_response
 
-def delete(_id: str, es_client: Optional["Elasticsearch"] = None) -> Dict[str, Any]:
+def delete(_id: str) -> Dict[str, Any]:
     """Delete a scenario and its associated judgements.
 
     Args:
@@ -167,7 +165,7 @@ def delete(_id: str, es_client: Optional["Elasticsearch"] = None) -> Dict[str, A
             }
         }
     }
-    client = es_client if es_client is not None else es("studio")
+    client = es("studio")
     es_response = client.delete_by_query(
         index="esrs-scenarios,esrs-judgements",
         body=body,

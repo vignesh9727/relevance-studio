@@ -8,6 +8,7 @@ import pytest
 from server import auth
 from server.flask import app, AUTH_COOKIE_NAME, _request_user
 
+TEST_JWT_SECRET = "b474cb7a960d09c97598f96c558e809697677cf01b52f34838ef31120a0d9d88"
 
 @pytest.fixture
 def client():
@@ -62,7 +63,7 @@ class TestAuthEnabled:
     @pytest.fixture(autouse=True)
     def enable_auth(self, monkeypatch):
         monkeypatch.setattr(auth, "AUTH_ENABLED", True)
-        monkeypatch.setattr(auth, "AUTH_JWT_SECRET", "test-secret")
+        monkeypatch.setattr(auth, "AUTH_JWT_SECRET", TEST_JWT_SECRET)
 
     def test_login_accessible_without_session(self, client, monkeypatch):
         # Login calls validate_credentials which needs es_studio_endpoint. Mock env.
@@ -122,7 +123,7 @@ class TestLoginRoute:
     @pytest.fixture(autouse=True)
     def enable_auth(self, monkeypatch):
         monkeypatch.setattr(auth, "AUTH_ENABLED", True)
-        monkeypatch.setattr(auth, "AUTH_JWT_SECRET", "test-secret")
+        monkeypatch.setattr(auth, "AUTH_JWT_SECRET", TEST_JWT_SECRET)
 
     def test_login_requires_body(self, client):
         r = client.post("/api/auth/login", json={})

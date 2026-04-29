@@ -53,6 +53,8 @@ def test_healthz_http_route_uses_default_auth(monkeypatch):
     default_client = object()
 
     monkeypatch.setattr("server.mcp_auth_middleware.get_http_request", lambda: request)
+    mock_set_clients = MagicMock()
+    monkeypatch.setattr("server.mcp_auth_middleware.set_request_clients", mock_set_clients)
     monkeypatch.setattr(
         "server.mcp_auth_middleware.mcp_auth.get_default_user_and_client",
         lambda: (default_user, default_client),
@@ -64,7 +66,7 @@ def test_healthz_http_route_uses_default_auth(monkeypatch):
 
     assert result == "ok"
     assert fast_ctx.get_state("mcp_user") == default_user
-    assert fast_ctx.get_state("mcp_es_client") is default_client
+    mock_set_clients.assert_called_once_with(default_client)
 
 
 def test_healthz_tool_call_uses_default_auth(monkeypatch):
@@ -77,6 +79,8 @@ def test_healthz_tool_call_uses_default_auth(monkeypatch):
     default_client = object()
 
     monkeypatch.setattr("server.mcp_auth_middleware.get_http_request", lambda: request)
+    mock_set_clients = MagicMock()
+    monkeypatch.setattr("server.mcp_auth_middleware.set_request_clients", mock_set_clients)
     monkeypatch.setattr(
         "server.mcp_auth_middleware.mcp_auth.get_default_user_and_client",
         lambda: (default_user, default_client),
@@ -88,7 +92,7 @@ def test_healthz_tool_call_uses_default_auth(monkeypatch):
 
     assert result == "ok"
     assert fast_ctx.get_state("mcp_user") == default_user
-    assert fast_ctx.get_state("mcp_es_client") is default_client
+    mock_set_clients.assert_called_once_with(default_client)
 
 
 def test_auth_disabled_uses_default_auth(monkeypatch):
@@ -101,6 +105,8 @@ def test_auth_disabled_uses_default_auth(monkeypatch):
 
     monkeypatch.setattr("server.mcp_auth_middleware.get_http_request", lambda: request)
     monkeypatch.setattr("server.mcp_auth_middleware.mcp_auth.AUTH_ENABLED", False)
+    mock_set_clients = MagicMock()
+    monkeypatch.setattr("server.mcp_auth_middleware.set_request_clients", mock_set_clients)
     monkeypatch.setattr(
         "server.mcp_auth_middleware.mcp_auth.get_default_user_and_client",
         lambda: (default_user, default_client),
@@ -112,7 +118,7 @@ def test_auth_disabled_uses_default_auth(monkeypatch):
 
     assert result == "ok"
     assert fast_ctx.get_state("mcp_user") == default_user
-    assert fast_ctx.get_state("mcp_es_client") is default_client
+    mock_set_clients.assert_called_once_with(default_client)
 
 
 def test_auth_enabled_without_http_request_raises(monkeypatch):
@@ -157,6 +163,8 @@ def test_auth_enabled_valid_header_sets_state(monkeypatch):
 
     monkeypatch.setattr("server.mcp_auth_middleware.get_http_request", lambda: request)
     monkeypatch.setattr("server.mcp_auth_middleware.mcp_auth.AUTH_ENABLED", True)
+    mock_set_clients = MagicMock()
+    monkeypatch.setattr("server.mcp_auth_middleware.set_request_clients", mock_set_clients)
     monkeypatch.setattr(
         "server.mcp_auth_middleware.mcp_auth.parse_authorization_header",
         lambda _: {"username": "alice", "password": "secret"},
@@ -172,7 +180,7 @@ def test_auth_enabled_valid_header_sets_state(monkeypatch):
 
     assert result == "ok"
     assert fast_ctx.get_state("mcp_user") == user
-    assert fast_ctx.get_state("mcp_es_client") is es_client
+    mock_set_clients.assert_called_once_with(es_client)
     call_next.assert_called_once_with(ctx)
 
 

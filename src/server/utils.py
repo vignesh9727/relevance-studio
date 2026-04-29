@@ -208,7 +208,7 @@ def remove_empty_values(obj, keep_fields=None, path=""):
     else:
         return obj
     
-def search_tags(asset_type: str, workspace_id: str = None, es_client: Optional["Elasticsearch"] = None) -> Dict[str, Any]:
+def search_tags(asset_type: str, workspace_id: str = None) -> Dict[str, Any]:
     """
     Standardizes retrieval for tags() API of workspace assets.
     """
@@ -240,7 +240,7 @@ def search_tags(asset_type: str, workspace_id: str = None, es_client: Optional["
         }
     }
     
-    client = es_client if es_client is not None else es("studio")
+    client = es("studio")
     # Submit search
     es_response = client.search(
         index=f"esrs-{asset_type}",
@@ -257,7 +257,6 @@ def search_assets(
         size: int = 10,
         page: int = 1,
         counts: List[str] = [],
-        es_client: Optional["Elasticsearch"] = None,
     ) -> Dict[str, Any]:
     """
     Standardizes basic searches and aggs for the search() API of workspace assets.
@@ -324,7 +323,7 @@ def search_assets(
         else:
             body["sort"] = [sort]
     
-    client = es_client if es_client is not None else es("studio")
+    client = es("studio")
     # Submit search
     es_response = client.search(
         index=f"esrs-{asset_type}",

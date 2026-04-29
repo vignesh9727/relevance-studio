@@ -257,7 +257,6 @@ def run(
         evaluation: Dict[str, Any],
         store_results: Optional[bool] = False,
         started_by = "unknown",
-        es_client: Optional["Elasticsearch"] = None,
     ) -> Dict[str, Any]:
     """Execute an evaluation for a benchmark.
 
@@ -338,7 +337,7 @@ def run(
         workspace_id = evaluation["workspace_id"]
         
         # Select candidates for strategies and scenarios
-        candidates = benchmarks.make_candidate_pool(workspace_id, evaluation["task"], es_client=es_client)
+        candidates = benchmarks.make_candidate_pool(workspace_id, evaluation["task"])
         
         # If there are no strategies or scenarios that meet the criteria of the
         # benchmark task definition, mark the evaluation as "skipped" and exit.
@@ -348,7 +347,7 @@ def run(
                     "took": int((time.time() - started_at) * 1000)
                 }
                 doc_updates = EvaluationSkip.model_validate(doc_updates).serialize()
-                client = es_client if es_client is not None else es("studio")
+                client = es("studio")
                 es_response = client.update(
                     index=INDEX_NAME,
                     id=evaluation_id,
@@ -381,7 +380,7 @@ def run(
         size = 10000
         
         # Get the index pattern and rating scale of workspace
-        client = es_client if es_client is not None else es("studio")
+        client = es("studio")
         es_response = client.get(
             index="esrs-workspaces",
             id=workspace_id,
@@ -515,7 +514,7 @@ def run(
             
         # Store index relevance fingerprints (optional in serverless mode)
         try:
-            evaluation["runtime"]["indices"] = content.make_index_relevance_fingerprints(index_pattern, es_client=None)
+            evaluation["runtime"]["indices"] = content.make_index_relevance_fingerprints(index_pattern)
         except Exception:
             # Fallback for serverless mode where indices.stats API is not available
             evaluation["runtime"]["indices"] = {}
@@ -753,7 +752,7 @@ def run(
         evaluation["task"]["requests"] = rank_eval_requests_count
         doc = EvaluationFail.model_validate(evaluation).serialize()
         if store_results:
-            client = es_client if es_client is not None else es("studio")
+            client = es("studio")
             client.update(
                 index=INDEX_NAME,
                 id=evaluation_id,
@@ -772,7 +771,6 @@ def search(
         size: int = 10,
         page: int = 1,
         aggs: bool = False,
-        es_client: Optional["Elasticsearch"] = None,
     ) -> Dict[str, Any]:
     """Search for evaluations.
 
@@ -792,11 +790,10 @@ def search(
     filters = [{ "term": { "benchmark_id": benchmark_id }}]
     response = utils.search_assets(
         "evaluations", workspace_id, text, filters, sort, size, page,
-        es_client=es_client,
     )
     return response
 
-def get(_id: str, es_client: Optional["Elasticsearch"] = None) -> Dict[str, Any]:
+def get(_id: str) -> Dict[str, Any]:
     """Get an evaluation by its _id.
 
     Args:
@@ -805,7 +802,7 @@ def get(_id: str, es_client: Optional["Elasticsearch"] = None) -> Dict[str, Any]
     Returns:
         The evaluation document from Elasticsearch.
     """
-    client = es_client if es_client is not None else es("studio")
+    client = es("studio")
     es_response = client.get(
         index=INDEX_NAME,
         id=_id,
@@ -819,7 +816,6 @@ def create(
         task: Dict[str, Any],
         user: str = None,
         via: str = None,
-        es_client: Optional["Elasticsearch"] = None,
     ) -> Dict[str, Any]:
     """Create a pending evaluation for a given workspace and benchmark.
 
@@ -841,7 +837,7 @@ def create(
     }
     doc = EvaluationCreate.model_validate(doc, context={"user": user, "via": via}).serialize()
     
-    client = es_client if es_client is not None else es("studio")
+    client = es("studio")
     es_response = client.index(
         index=INDEX_NAME,
         id=utils.unique_id(),
@@ -850,7 +846,7 @@ def create(
     )
     return es_response
 
-def delete(_id: str, es_client: Optional["Elasticsearch"] = None) -> Dict[str, Any]:
+def delete(_id: str) -> Dict[str, Any]:
     """Delete an evaluation from Elasticsearch.
 
     Args:
@@ -859,7 +855,7 @@ def delete(_id: str, es_client: Optional["Elasticsearch"] = None) -> Dict[str, A
     Returns:
         The response from the Elasticsearch delete operation.
     """
-    client = es_client if es_client is not None else es("studio")
+    client = es("studio")
     es_response = client.delete(
         index=INDEX_NAME,
         id=_id,
@@ -867,7 +863,7 @@ def delete(_id: str, es_client: Optional["Elasticsearch"] = None) -> Dict[str, A
     )
     return es_response
 
-def cleanup(time_ago: str = "2h", es_client: Optional["Elasticsearch"] = None) -> Dict[str, Any]:
+def cleanup(time_ago: str = "2h") -> Dict[str, Any]:
     """Delete stale "running" evaluations from Elasticsearch.
 
     Args:
@@ -886,7 +882,7 @@ def cleanup(time_ago: str = "2h", es_client: Optional["Elasticsearch"] = None) -
             }
         }
     }
-    client = es_client if es_client is not None else es("studio")
+    client = es("studio")
     es_response = client.delete_by_query(
         index=INDEX_NAME,
         body=body,

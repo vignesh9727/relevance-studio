@@ -6,6 +6,7 @@
 # Standard packages
 from typing import Dict, Optional, Union
 import os
+from contextvars import ContextVar
 
 # Third-party packages
 from dotenv import load_dotenv
@@ -32,6 +33,36 @@ ELASTICSEARCH_TIMEOUT = int(os.getenv("ELASTICSEARCH_TIMEOUT", "10").strip()) # 
 # Singleton Elasticsearch clients
 _es_clients = None
 _valid_es_clients = set([ "studio", "content", ])
+
+# Request-scoped client overrides for multi-user authentication
+_request_studio_client: ContextVar[Optional[Elasticsearch]] = ContextVar("_request_studio_client", default=None)
+_request_content_client: ContextVar[Optional[Elasticsearch]] = ContextVar("_request_content_client", default=None)
+
+
+def set_request_clients(studio_client: Optional[Elasticsearch], content_client: Optional[Elasticsearch] = None) -> None:
+    """
+    Set the Elasticsearch clients for the current request context.
+    If content_client is not provided, it will be determined based on whether
+    the content deployment is separate from the studio deployment.
+    """
+    _request_studio_client.set(studio_client)
+    
+    if content_client:
+        _request_content_client.set(content_client)
+    elif studio_client:
+        # If no explicit content client is provided, we use the studio client
+        # ONLY if the deployments are shared.
+        global _es_clients
+        if _es_clients is None:
+            _es_clients = _setup_clients()
+            
+        if _es_clients["studio"] == _es_clients["content"]:
+            _request_content_client.set(studio_client)
+        else:
+            _request_content_client.set(None) # Fall back to content singleton
+    else:
+        _request_studio_client.set(None)
+        _request_content_client.set(None)
 
 
 def _validate_endpoint_configuration() -> None:
@@ -99,10 +130,21 @@ def es_from_credentials(
 
 def es(client_name: str) -> Elasticsearch:
     """
-    Return one of the singleton clients.
+    Return the appropriate Elasticsearch client for the given name.
+    Prefers the request-scoped client if available, otherwise returns the singleton.
     """
     if client_name not in _valid_es_clients:
         raise Exception(f"'{client_name}' is not a valid Elasticsearch client.")
+    
+    # Check for request-scoped override
+    if client_name == "studio":
+        req = _request_studio_client.get()
+        if req: return req
+    elif client_name == "content":
+        req = _request_content_client.get()
+        if req: return req
+
+    # Fall back to singletons
     global _es_clients
     if _es_clients is None:
         _es_clients = _setup_clients()

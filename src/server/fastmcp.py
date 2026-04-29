@@ -49,32 +49,32 @@ def conversations_search(
         page: Optional[int] = 1,
         aggs: Optional[bool] = False,
     ) -> Dict[str, Any]:
-    user, es_client = mcp_auth.get_mcp_auth_from_context(ctx)
-    return dict(api.conversations.search(text, filters, sort, size, page, aggs, user=user, es_client=es_client))
+    user, _ = mcp_auth.get_mcp_auth_from_context(ctx)
+    return dict(api.conversations.search(text, filters, sort, size, page, aggs, user=user))
 
 @mcp.tool(description=api.conversations.get.__doc__)
 def conversations_get(ctx: Context, _id: str) -> Dict[str, Any]:
-    user, es_client = mcp_auth.get_mcp_auth_from_context(ctx)
-    return dict(api.conversations.get(_id, user=user, es_client=es_client))
+    user, _ = mcp_auth.get_mcp_auth_from_context(ctx)
+    return dict(api.conversations.get(_id, user=user))
 
 @mcp.tool(description=api.conversations.create.__doc__ + f"""\n
 JSON schema for doc:\n\n{ConversationsCreate.model_input_json_schema()}
 """)
 def conversations_create(ctx: Context, doc: Dict[str, Any], _id: str = None) -> Dict[str, Any]:
-    user, es_client = mcp_auth.get_mcp_auth_from_context(ctx)
-    return dict(api.conversations.create(doc, _id, user=user, via="mcp", es_client=es_client))
+    user, _ = mcp_auth.get_mcp_auth_from_context(ctx)
+    return dict(api.conversations.create(doc, _id, user=user, via="mcp"))
 
 @mcp.tool(description=api.conversations.update.__doc__ + f"""\n
 JSON schema for doc_partial:\n\n{ConversationsUpdate.model_input_json_schema()}
 """)
 def conversations_update(ctx: Context, _id: str, doc_partial: Dict[str, Any]) -> Dict[str, Any]:
-    user, es_client = mcp_auth.get_mcp_auth_from_context(ctx)
-    return dict(api.conversations.update(_id, doc_partial, user=user, via="mcp", es_client=es_client))
+    user, _ = mcp_auth.get_mcp_auth_from_context(ctx)
+    return dict(api.conversations.update(_id, doc_partial, user=user, via="mcp"))
 
 @mcp.tool(description=api.conversations.delete.__doc__)
 def conversations_delete(ctx: Context, _id: str) -> Dict[str, Any]:
-    user, es_client = mcp_auth.get_mcp_auth_from_context(ctx)
-    return dict(api.conversations.delete(_id, user=user, es_client=es_client))
+    user, _ = mcp_auth.get_mcp_auth_from_context(ctx)
+    return dict(api.conversations.delete(_id, user=user))
 
 
 ####  API: Workspaces  #########################################################
@@ -89,32 +89,32 @@ def workspaces_search(
         page: Optional[int] = 1,
         aggs: Optional[bool] = False,
     ) -> Dict[str, Any]:
-    user, es_client = mcp_auth.get_mcp_auth_from_context(ctx)
-    return dict(api.workspaces.search(text, filters, sort, size, page, aggs, es_client=es_client))
+    user, _ = mcp_auth.get_mcp_auth_from_context(ctx)
+    return dict(api.workspaces.search(text, filters, sort, size, page, aggs))
 
 @mcp.tool(description=api.workspaces.get.__doc__)
 def workspaces_get(ctx: Context, _id: str) -> Dict[str, Any]:
-    user, es_client = mcp_auth.get_mcp_auth_from_context(ctx)
-    return dict(api.workspaces.get(_id, es_client=es_client))
+    user, _ = mcp_auth.get_mcp_auth_from_context(ctx)
+    return dict(api.workspaces.get(_id))
 
 @mcp.tool(description=api.workspaces.create.__doc__ + f"""\n
 JSON schema for doc:\n\n{WorkspaceCreate.model_input_json_schema()}
 """)
 def workspaces_create(ctx: Context, doc: Dict[str, Any], _id: str = None) -> Dict[str, Any]:
-    user, es_client = mcp_auth.get_mcp_auth_from_context(ctx)
-    return dict(api.workspaces.create(doc, _id, user=user, via="mcp", es_client=es_client))
+    user, _ = mcp_auth.get_mcp_auth_from_context(ctx)
+    return dict(api.workspaces.create(doc, _id, user=user, via="mcp"))
 
 @mcp.tool(description=api.workspaces.update.__doc__ + f"""\n
 JSON schema for doc_partial:\n\n{DisplayCreate.model_input_json_schema()}
 """)
 def workspaces_update(ctx: Context, _id: str, doc_partial: Dict[str, Any]) -> Dict[str, Any]:
-    user, es_client = mcp_auth.get_mcp_auth_from_context(ctx)
-    return dict(api.workspaces.update(_id, doc_partial, user=user, via="mcp", es_client=es_client))
+    user, _ = mcp_auth.get_mcp_auth_from_context(ctx)
+    return dict(api.workspaces.update(_id, doc_partial, user=user, via="mcp"))
 
 @mcp.tool(description=api.workspaces.delete.__doc__)
 def workspaces_delete(ctx: Context, _id: str) -> Dict[str, Any]:
-    user, es_client = mcp_auth.get_mcp_auth_from_context(ctx)
-    return dict(api.workspaces.delete(_id, es_client=es_client))
+    user, _ = mcp_auth.get_mcp_auth_from_context(ctx)
+    return dict(api.workspaces.delete(_id))
 
 
 ####  API: Displays  ###########################################################
@@ -130,32 +130,32 @@ def displays_search(
         page: Optional[int] = 1,
         aggs: Optional[bool] = False,
     ) -> Dict[str, Any]:
-    user, es_client = mcp_auth.get_mcp_auth_from_context(ctx)
-    return dict(api.displays.search(workspace_id, text, filters, sort, size, page, aggs, es_client=es_client))
+    user, _ = mcp_auth.get_mcp_auth_from_context(ctx)
+    return dict(api.displays.search(workspace_id, text, filters, sort, size, page, aggs))
 
 @mcp.tool(description=api.displays.get.__doc__)
 def displays_get(ctx: Context, _id: str) -> Dict[str, Any]:
-    user, es_client = mcp_auth.get_mcp_auth_from_context(ctx)
-    return dict(api.displays.get(_id, es_client=es_client))
+    user, _ = mcp_auth.get_mcp_auth_from_context(ctx)
+    return dict(api.displays.get(_id))
 
 @mcp.tool(description=api.displays.create.__doc__ + f"""\n
 JSON schema for doc:\n\n{DisplayCreate.model_input_json_schema()}
 """)
 def displays_create(ctx: Context, doc: Dict[str, Any], _id: str = None) -> Dict[str, Any]:
-    user, es_client = mcp_auth.get_mcp_auth_from_context(ctx)
-    return dict(api.displays.create(doc, _id, user=user, via="mcp", es_client=es_client))
+    user, _ = mcp_auth.get_mcp_auth_from_context(ctx)
+    return dict(api.displays.create(doc, _id, user=user, via="mcp"))
 
 @mcp.tool(description=api.displays.update.__doc__ + f"""\n
 JSON schema for doc_partia:\n\n{DisplayUpdate.model_input_json_schema()}
 """)
 def displays_update(ctx: Context, _id: str, doc_partial: Dict[str, Any]) -> Dict[str, Any]:
-    user, es_client = mcp_auth.get_mcp_auth_from_context(ctx)
-    return dict(api.displays.update(_id, doc_partial, user=user, via="mcp", es_client=es_client))
+    user, _ = mcp_auth.get_mcp_auth_from_context(ctx)
+    return dict(api.displays.update(_id, doc_partial, user=user, via="mcp"))
 
 @mcp.tool(description=api.displays.delete.__doc__)
 def displays_delete(ctx: Context, _id: str) -> Dict[str, Any]:
-    user, es_client = mcp_auth.get_mcp_auth_from_context(ctx)
-    return dict(api.displays.delete(_id, es_client=es_client))
+    user, _ = mcp_auth.get_mcp_auth_from_context(ctx)
+    return dict(api.displays.delete(_id))
 
 
 ####  API: Scenarios  ##########################################################
@@ -171,37 +171,37 @@ def scenarios_search(
         page: Optional[int] = 1,
         aggs: Optional[bool] = False,
     ) -> Dict[str, Any]:
-    user, es_client = mcp_auth.get_mcp_auth_from_context(ctx)
-    return dict(api.scenarios.search(workspace_id, text, filters, sort, size, page, aggs, es_client=es_client))
+    user, _ = mcp_auth.get_mcp_auth_from_context(ctx)
+    return dict(api.scenarios.search(workspace_id, text, filters, sort, size, page, aggs))
 
 @mcp.tool(description=api.scenarios.tags.__doc__)
 def scenarios_tags(ctx: Context, workspace_id: str) -> Dict[str, Any]:
-    user, es_client = mcp_auth.get_mcp_auth_from_context(ctx)
-    return dict(api.scenarios.tags(workspace_id, es_client=es_client))
+    user, _ = mcp_auth.get_mcp_auth_from_context(ctx)
+    return dict(api.scenarios.tags(workspace_id))
 
 @mcp.tool(description=api.scenarios.get.__doc__)
 def scenarios_get(ctx: Context, _id: str) -> Dict[str, Any]:
-    user, es_client = mcp_auth.get_mcp_auth_from_context(ctx)
-    return dict(api.scenarios.get(_id, es_client=es_client))
+    user, _ = mcp_auth.get_mcp_auth_from_context(ctx)
+    return dict(api.scenarios.get(_id))
 
 @mcp.tool(description=api.scenarios.create.__doc__ + f"""\n
 JSON schema for doc:\n\n{ScenarioCreate.model_input_json_schema()}
 """)
 def scenarios_create(ctx: Context, doc: Dict[str, Any]) -> Dict[str, Any]:
-    user, es_client = mcp_auth.get_mcp_auth_from_context(ctx)
-    return dict(api.scenarios.create(doc, user=user, via="mcp", es_client=es_client))
+    user, _ = mcp_auth.get_mcp_auth_from_context(ctx)
+    return dict(api.scenarios.create(doc, user=user, via="mcp"))
 
 @mcp.tool(description=api.scenarios.update.__doc__ + f"""\n
 JSON schema for doc_partial:\n\n{ScenarioUpdate.model_input_json_schema()}
 """)
 def scenarios_update(ctx: Context, _id: str, doc_partial: Dict[str, Any]) -> Dict[str, Any]:
-    user, es_client = mcp_auth.get_mcp_auth_from_context(ctx)
-    return dict(api.scenarios.update(_id, doc_partial, user=user, via="mcp", es_client=es_client))
+    user, _ = mcp_auth.get_mcp_auth_from_context(ctx)
+    return dict(api.scenarios.update(_id, doc_partial, user=user, via="mcp"))
 
 @mcp.tool(description=api.scenarios.delete.__doc__)
 def scenarios_delete(ctx: Context, _id: str) -> Dict[str, Any]:
-    user, es_client = mcp_auth.get_mcp_auth_from_context(ctx)
-    return dict(api.scenarios.delete(_id, es_client=es_client))
+    user, _ = mcp_auth.get_mcp_auth_from_context(ctx)
+    return dict(api.scenarios.delete(_id))
 
 
 ####  API: Judgements  #########################################################
@@ -218,18 +218,27 @@ def judgements_search(
         sort: str = None,
         _source: Dict[str, Any] = None
     ) -> Dict[str, Any]:
-    user, es_client = mcp_auth.get_mcp_auth_from_context(ctx)
-    return dict(api.judgements.search(workspace_id, scenario_id, index_pattern, query, query_string, filter, sort, _source, es_client=es_client))
+    user, _ = mcp_auth.get_mcp_auth_from_context(ctx)
+    return dict(api.judgements.search(
+        workspace_id,
+        scenario_id,
+        index_pattern,
+        query,
+        query_string,
+        filter,
+        sort,
+        _source,
+    ))
 
 @mcp.tool(description=api.judgements.set.__doc__)
 def judgements_set(ctx: Context, workspace_id: str, scenario_id: str, index: str, doc_id: str, rating: int) -> Dict[str, Any]:
-    user, es_client = mcp_auth.get_mcp_auth_from_context(ctx)
-    return dict(api.judgements.set(workspace_id, scenario_id, index, doc_id, rating, user=user, via="mcp", es_client=es_client))
+    user, _ = mcp_auth.get_mcp_auth_from_context(ctx)
+    return dict(api.judgements.set(workspace_id, scenario_id, index, doc_id, rating, user=user, via="mcp"))
 
 @mcp.tool(description=api.judgements.unset.__doc__)
 def judgements_unset(ctx: Context, _id: str) -> Dict[str, Any]:
-    user, es_client = mcp_auth.get_mcp_auth_from_context(ctx)
-    return dict(api.judgements.unset(_id, es_client=es_client))
+    user, _ = mcp_auth.get_mcp_auth_from_context(ctx)
+    return dict(api.judgements.unset(_id))
 
 
 ####  API: Strategies  #########################################################
@@ -245,37 +254,37 @@ def strategies_search(
         page: Optional[int] = 1,
         aggs: Optional[bool] = False,
     ) -> Dict[str, Any]:
-    user, es_client = mcp_auth.get_mcp_auth_from_context(ctx)
-    return dict(api.strategies.search(workspace_id, text, filters, sort, size, page, aggs, es_client=es_client))
+    user, _ = mcp_auth.get_mcp_auth_from_context(ctx)
+    return dict(api.strategies.search(workspace_id, text, filters, sort, size, page, aggs))
 
 @mcp.tool(description=api.strategies.tags.__doc__)
 def strategies_tags(ctx: Context, workspace_id: str) -> Dict[str, Any]:
-    user, es_client = mcp_auth.get_mcp_auth_from_context(ctx)
-    return dict(api.strategies.tags(workspace_id, es_client=es_client))
+    user, _ = mcp_auth.get_mcp_auth_from_context(ctx)
+    return dict(api.strategies.tags(workspace_id))
 
 @mcp.tool(description=api.strategies.get.__doc__)
 def strategies_get(ctx: Context, _id: str) -> Dict[str, Any]:
-    user, es_client = mcp_auth.get_mcp_auth_from_context(ctx)
-    return dict(api.strategies.get(_id, es_client=es_client))
+    user, _ = mcp_auth.get_mcp_auth_from_context(ctx)
+    return dict(api.strategies.get(_id))
 
 @mcp.tool(description=api.strategies.create.__doc__ + f"""\n
 JSON schema for doc:\n\n{StrategyCreate.model_input_json_schema()}
 """)
 def strategies_create(ctx: Context, doc: Dict[str, Any], _id: str = None) -> Dict[str, Any]:
-    user, es_client = mcp_auth.get_mcp_auth_from_context(ctx)
-    return dict(api.strategies.create(doc, _id, user=user, via="mcp", es_client=es_client))
+    user, _ = mcp_auth.get_mcp_auth_from_context(ctx)
+    return dict(api.strategies.create(doc, _id, user=user, via="mcp"))
 
 @mcp.tool(description=api.strategies.update.__doc__ + f"""\n
 JSON schema for doc_partial:\n\n{StrategyUpdate.model_input_json_schema()}
 """)
 def strategies_update(ctx: Context, _id: str, doc_partial: Dict[str, Any]) -> Dict[str, Any]:
-    user, es_client = mcp_auth.get_mcp_auth_from_context(ctx)
-    return dict(api.strategies.update(_id, doc_partial, user=user, via="mcp", es_client=es_client))
+    user, _ = mcp_auth.get_mcp_auth_from_context(ctx)
+    return dict(api.strategies.update(_id, doc_partial, user=user, via="mcp"))
 
 @mcp.tool(description=api.strategies.delete.__doc__)
 def strategies_delete(ctx: Context, _id: str) -> Dict[str, Any]:
-    user, es_client = mcp_auth.get_mcp_auth_from_context(ctx)
-    return dict(api.strategies.delete(_id, es_client=es_client))
+    user, _ = mcp_auth.get_mcp_auth_from_context(ctx)
+    return dict(api.strategies.delete(_id))
 
 
 ####  API: Benchmarks  #########################################################
@@ -291,42 +300,42 @@ def benchmarks_search(
         page: Optional[int] = 1,
         aggs: Optional[bool] = False,
     ) -> Dict[str, Any]:
-    user, es_client = mcp_auth.get_mcp_auth_from_context(ctx)
-    return dict(api.benchmarks.search(workspace_id, text, filters, sort, size, page, aggs, es_client=es_client))
+    user, _ = mcp_auth.get_mcp_auth_from_context(ctx)
+    return dict(api.benchmarks.search(workspace_id, text, filters, sort, size, page, aggs))
 
 @mcp.tool(description=api.benchmarks.tags.__doc__)
 def benchmarks_tags(ctx: Context, workspace_id: str) -> Dict[str, Any]:
-    user, es_client = mcp_auth.get_mcp_auth_from_context(ctx)
-    return dict(api.benchmarks.tags(workspace_id, es_client=es_client))
+    user, _ = mcp_auth.get_mcp_auth_from_context(ctx)
+    return dict(api.benchmarks.tags(workspace_id))
 
 @mcp.tool(description=api.benchmarks.make_candidate_pool.__doc__)
 def benchmarks_make_candidate_pool(ctx: Context, workspace_id: str, task: Dict[str, Any]) -> Dict[str, Any]:
-    user, es_client = mcp_auth.get_mcp_auth_from_context(ctx)
-    return dict(api.benchmarks.make_candidate_pool(workspace_id, task, es_client=es_client))
+    user, _ = mcp_auth.get_mcp_auth_from_context(ctx)
+    return dict(api.benchmarks.make_candidate_pool(workspace_id, task))
 
 @mcp.tool(description=api.benchmarks.get.__doc__)
 def benchmarks_get(ctx: Context, _id: str) -> Dict[str, Any]:
-    user, es_client = mcp_auth.get_mcp_auth_from_context(ctx)
-    return dict(api.benchmarks.get(_id, es_client=es_client))
+    user, _ = mcp_auth.get_mcp_auth_from_context(ctx)
+    return dict(api.benchmarks.get(_id))
 
 @mcp.tool(description=api.benchmarks.create.__doc__ + f"""\n
 JSON schema for doc:\n\n{BenchmarkCreate.model_input_json_schema()}
 """)
 def benchmarks_create(ctx: Context, doc: Dict[str, Any], _id: str = None) -> Dict[str, Any]:
-    user, es_client = mcp_auth.get_mcp_auth_from_context(ctx)
-    return dict(api.benchmarks.create(doc, _id, user=user, via="mcp", es_client=es_client))
+    user, _ = mcp_auth.get_mcp_auth_from_context(ctx)
+    return dict(api.benchmarks.create(doc, _id, user=user, via="mcp"))
 
 @mcp.tool(description=api.benchmarks.update.__doc__ + f"""\n
 JSON schema for doc:\n\n{BenchmarkUpdate.model_input_json_schema()}
 """)
 def benchmarks_update(ctx: Context, _id: str, doc_partial: Dict[str, Any]) -> Dict[str, Any]:
-    user, es_client = mcp_auth.get_mcp_auth_from_context(ctx)
-    return dict(api.benchmarks.update(_id, doc_partial, user=user, via="mcp", es_client=es_client))
+    user, _ = mcp_auth.get_mcp_auth_from_context(ctx)
+    return dict(api.benchmarks.update(_id, doc_partial, user=user, via="mcp"))
 
 @mcp.tool(description=api.benchmarks.delete.__doc__)
 def benchmarks_delete(ctx: Context, _id: str) -> Dict[str, Any]:
-    user, es_client = mcp_auth.get_mcp_auth_from_context(ctx)
-    return dict(api.benchmarks.delete(_id, es_client=es_client))
+    user, _ = mcp_auth.get_mcp_auth_from_context(ctx)
+    return dict(api.benchmarks.delete(_id))
 
 
 ####  API: Evaluations  ########################################################
@@ -343,56 +352,52 @@ def evaluations_search(
         page: Optional[int] = 1,
         aggs: Optional[bool] = False,
     ) -> Dict[str, Any]:
-    user, es_client = mcp_auth.get_mcp_auth_from_context(ctx)
-    return dict(api.evaluations.search(workspace_id, benchmark_id, text, filters, sort, size, page, aggs, es_client=es_client))
+    user, _ = mcp_auth.get_mcp_auth_from_context(ctx)
+    return dict(api.evaluations.search(workspace_id, benchmark_id, text, filters, sort, size, page, aggs))
 
 @mcp.tool(description=api.evaluations.get.__doc__)
 def evaluations_get(ctx: Context, _id: str) -> Dict[str, Any]:
-    user, es_client = mcp_auth.get_mcp_auth_from_context(ctx)
-    return dict(api.evaluations.get(_id, es_client=es_client))
+    user, _ = mcp_auth.get_mcp_auth_from_context(ctx)
+    return dict(api.evaluations.get(_id))
 
 @mcp.tool(description=api.evaluations.create.__doc__ + f"""\n
 JSON schema for doc:\n\n{EvaluationCreate.model_input_json_schema()}
 """)
 def evaluations_create(ctx: Context, workspace_id: str, benchmark_id: str, task: Dict[str, Any]) -> Dict[str, Any]:
-    user, es_client = mcp_auth.get_mcp_auth_from_context(ctx)
-    return dict(api.evaluations.create(workspace_id, benchmark_id, task, user=user, via="mcp", es_client=es_client))
+    user, _ = mcp_auth.get_mcp_auth_from_context(ctx)
+    return dict(api.evaluations.create(workspace_id, benchmark_id, task, user=user, via="mcp"))
 
 @mcp.tool(description=api.evaluations.run.__doc__)
 def evaluations_run(ctx: Context, evaluation: Dict[str, Any], store_results: Optional[bool] = False) -> Dict[str, Any]:
-    user, es_client = mcp_auth.get_mcp_auth_from_context(ctx)
-    return dict(api.evaluations.run(evaluation, store_results, started_by=user, es_client=es_client))
+    user, _ = mcp_auth.get_mcp_auth_from_context(ctx)
+    return dict(api.evaluations.run(evaluation, store_results, started_by=user))
 
 @mcp.tool(description=api.evaluations.delete.__doc__)
 def evaluations_delete(ctx: Context, _id: str) -> Dict[str, Any]:
-    user, es_client = mcp_auth.get_mcp_auth_from_context(ctx)
-    return dict(api.evaluations.delete(_id, es_client=es_client))
+    user, _ = mcp_auth.get_mcp_auth_from_context(ctx)
+    return dict(api.evaluations.delete(_id))
 
 
 ####  API: Content  ############################################################
 
 @mcp.tool(description=api.content.search.__doc__)
 def content_search(ctx: Context, index_patterns: str, body: Dict[str, Any]) -> Dict[str, Any]:
-    user, es_client = mcp_auth.get_mcp_auth_from_context(ctx)
-    return dict(api.content.search(index_patterns, body, es_client=es_client))
+    return dict(api.content.search(index_patterns, body))
 
 @mcp.tool(description=api.content.mappings_browse.__doc__)
 def content_mappings_browse(ctx: Context, index_patterns: str) -> Dict[str, Any]:
-    user, es_client = mcp_auth.get_mcp_auth_from_context(ctx)
-    return dict(api.content.mappings_browse(index_patterns, es_client=es_client))
+    return dict(api.content.mappings_browse(index_patterns))
     
     
 ####  API: Setup  ##############################################################
 
 @mcp.tool(description=api.setup.check.__doc__)
 def setup_check(ctx: Context) -> Dict[str, Any]:
-    user, es_client = mcp_auth.get_mcp_auth_from_context(ctx)
-    return api.setup.check(es_client=es_client)
+    return api.setup.check()
 
 @mcp.tool(description=api.setup.run.__doc__)
 def setup_run(ctx: Context) -> Dict[str, Any]:
-    user, es_client = mcp_auth.get_mcp_auth_from_context(ctx)
-    return api.setup.run(via="mcp", es_client=es_client)
+    return api.setup.run(via="mcp")
 
 
 ####  Utils  ###################################################################

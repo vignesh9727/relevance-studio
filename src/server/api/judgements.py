@@ -26,7 +26,6 @@ def search(
         filter: str = None,
         sort: str = None,
         _source: Optional[Dict[str, Any]] = None,
-        es_client: Optional["Elasticsearch"] = None,
     ) -> Dict[str, Any]:
     """Get documents from the content deployment with ratings joined to them.
 
@@ -89,8 +88,8 @@ def search(
         body["sort"] = [{
             "@meta.updated_at": "asc"
         }]
-    client = es_client if es_client is not None else es("studio")
-    es_response = client.search(index="esrs-judgements", body=body)
+    s_client = es("studio")
+    es_response = s_client.search(index="esrs-judgements", body=body)
     for hit in es_response.body.get("hits", {}).get("hits") or []:
         _index = hit["_source"]["index"]
         _id = hit["_source"]["doc_id"]
@@ -151,7 +150,8 @@ def search(
         body["sort"] = [{
             "_score": "desc"
         }]
-    es_response = es("content").search(index=index_pattern, body=body)
+    c_client = es("content")
+    es_response = c_client.search(index=index_pattern, body=body)
     
     # Merge docs and ratings
     response["hits"] = es_response.body["hits"]
@@ -168,7 +168,7 @@ def search(
         response["hits"]["hits"] = sorted(response["hits"]["hits"], key=lambda hit: (hit.get("@meta") or {}).get("created_at") or fallback, reverse=reverse)
     return response
 
-def set(workspace_id: str, scenario_id: str, index: str, doc_id: str, rating: int, user: str = None, via: str = None, es_client: Optional["Elasticsearch"] = None) -> Dict[str, Any]:
+def set(workspace_id: str, scenario_id: str, index: str, doc_id: str, rating: int, user: str = None, via: str = None) -> Dict[str, Any]:
     """Create or update a judgement.
     
     Generates a deterministic _id for UX efficiency, and to prevent the creation
@@ -229,7 +229,7 @@ def set(workspace_id: str, scenario_id: str, index: str, doc_id: str, rating: in
         "upsert": doc
     }
 
-    client = es_client if es_client is not None else es("studio")
+    client = es("studio")
     es_response = client.update(
         index=INDEX_NAME,
         id=utils.unique_id([
@@ -243,7 +243,7 @@ def set(workspace_id: str, scenario_id: str, index: str, doc_id: str, rating: in
     )
     return es_response
 
-def unset(_id: str, es_client: Optional["Elasticsearch"] = None) -> Dict[str, Any]:
+def unset(_id: str) -> Dict[str, Any]:
     """Delete a judgement in Elasticsearch.
 
     Args:
@@ -252,7 +252,7 @@ def unset(_id: str, es_client: Optional["Elasticsearch"] = None) -> Dict[str, An
     Returns:
         The response from the Elasticsearch delete operation.
     """
-    client = es_client if es_client is not None else es("studio")
+    client = es("studio")
     es_response = client.delete(
         index=INDEX_NAME,
         id=_id,

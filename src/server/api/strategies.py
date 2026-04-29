@@ -24,7 +24,6 @@ def search(
         size: int = 10,
         page: int = 1,
         aggs: bool = False,
-        es_client: Optional["Elasticsearch"] = None,
     ) -> Dict[str, Any]:
     """Search for strategies.
 
@@ -42,11 +41,10 @@ def search(
     """
     response = utils.search_assets(
         "strategies", workspace_id, text, filters, sort, size, page,
-        es_client=es_client,
     )
     return response
 
-def tags(workspace_id: str, es_client: Optional["Elasticsearch"] = None) -> Dict[str, Any]:
+def tags(workspace_id: str) -> Dict[str, Any]:
     """List all strategy tags (up to 10,000).
 
     Args:
@@ -55,10 +53,10 @@ def tags(workspace_id: str, es_client: Optional["Elasticsearch"] = None) -> Dict
     Returns:
         The response from Elasticsearch containing tag aggregations.
     """
-    es_response = utils.search_tags("strategies", workspace_id, es_client=es_client)
+    es_response = utils.search_tags("strategies", workspace_id)
     return es_response
 
-def get(_id: str, es_client: Optional["Elasticsearch"] = None) -> Dict[str, Any]:
+def get(_id: str) -> Dict[str, Any]:
     """Get a strategy by its _id.
 
     Args:
@@ -67,7 +65,7 @@ def get(_id: str, es_client: Optional["Elasticsearch"] = None) -> Dict[str, Any]
     Returns:
         The strategy document from Elasticsearch.
     """
-    client = es_client if es_client is not None else es("studio")
+    client = es("studio")
     es_response = client.get(
         index=INDEX_NAME,
         id=_id,
@@ -75,7 +73,7 @@ def get(_id: str, es_client: Optional["Elasticsearch"] = None) -> Dict[str, Any]
     )
     return es_response
 
-def create(doc: Dict[str, Any], _id: str = None, user: str = None, via: str = None, es_client: Optional["Elasticsearch"] = None) -> Dict[str, Any]:
+def create(doc: Dict[str, Any], _id: str = None, user: str = None, via: str = None) -> Dict[str, Any]:
     """Create a strategy.
 
     Args:
@@ -94,7 +92,7 @@ def create(doc: Dict[str, Any], _id: str = None, user: str = None, via: str = No
     doc = utils.copy_fields_to_search("strategies", doc)
     
     # Submit
-    client = es_client if es_client is not None else es("studio")
+    client = es("studio")
     es_response = client.index(
         index=INDEX_NAME,
         id=_id or utils.unique_id(),
@@ -103,7 +101,7 @@ def create(doc: Dict[str, Any], _id: str = None, user: str = None, via: str = No
     )
     return es_response
 
-def update(_id: str, doc_partial: Dict[str, Any], user: str = None, via: str = None, es_client: Optional["Elasticsearch"] = None) -> Dict[str, Any]:
+def update(_id: str, doc_partial: Dict[str, Any], user: str = None, via: str = None) -> Dict[str, Any]:
     """Update a strategy by its _id.
 
     Args:
@@ -122,7 +120,7 @@ def update(_id: str, doc_partial: Dict[str, Any], user: str = None, via: str = N
     doc_partial = utils.copy_fields_to_search("strategies", doc_partial)
     
     # Submit
-    client = es_client if es_client is not None else es("studio")
+    client = es("studio")
     es_response = client.update(
         index=INDEX_NAME,
         id=_id,
@@ -131,7 +129,7 @@ def update(_id: str, doc_partial: Dict[str, Any], user: str = None, via: str = N
     )
     return es_response
 
-def delete(_id: str, es_client: Optional["Elasticsearch"] = None) -> Dict[str, Any]:
+def delete(_id: str) -> Dict[str, Any]:
     """Delete a strategy by its _id.
 
     Args:
@@ -140,7 +138,7 @@ def delete(_id: str, es_client: Optional["Elasticsearch"] = None) -> Dict[str, A
     Returns:
         The response from the Elasticsearch delete operation.
     """
-    client = es_client if es_client is not None else es("studio")
+    client = es("studio")
     es_response = client.delete(
         index=INDEX_NAME,
         id=_id,

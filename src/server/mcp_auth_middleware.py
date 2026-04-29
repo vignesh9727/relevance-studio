@@ -20,6 +20,7 @@ from typing_extensions import override
 
 # App packages
 from . import mcp_auth
+from .client import set_request_clients
 from .mcp_auth import HEALTHZ_TOOL_NAME
 
 # FastMCP
@@ -48,7 +49,7 @@ class MCPAuthMiddleware(Middleware):
         if request and request.url.path.rstrip("/").endswith("/healthz"):
             user, es_client = mcp_auth.get_default_user_and_client()
             ctx.set_state("mcp_user", user)
-            ctx.set_state("mcp_es_client", es_client)
+            set_request_clients(es_client)
             return await call_next(context)
 
         # Exempt healthz tool
@@ -57,14 +58,14 @@ class MCPAuthMiddleware(Middleware):
             if hasattr(msg, "name") and msg.name == HEALTHZ_TOOL_NAME:
                 user, es_client = mcp_auth.get_default_user_and_client()
                 ctx.set_state("mcp_user", user)
-                ctx.set_state("mcp_es_client", es_client)
+                set_request_clients(es_client)
                 return await call_next(context)
 
         # AUTH_ENABLED=false: use default
         if not mcp_auth.AUTH_ENABLED:
             user, es_client = mcp_auth.get_default_user_and_client()
             ctx.set_state("mcp_user", user)
-            ctx.set_state("mcp_es_client", es_client)
+            set_request_clients(es_client)
             return await call_next(context)
 
         # Require auth: parse Authorization header
@@ -102,5 +103,5 @@ class MCPAuthMiddleware(Middleware):
             ) from e
 
         ctx.set_state("mcp_user", user)
-        ctx.set_state("mcp_es_client", es_client)
+        set_request_clients(es_client)
         return await call_next(context)

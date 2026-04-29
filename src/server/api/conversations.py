@@ -43,7 +43,6 @@ def search(
         page: int = 1,
         aggs: bool = False,
         user: Optional[str] = None,
-        es_client: Optional["Elasticsearch"] = None,
     ) -> Dict[str, Any]:
     """Search for conversations.
 
@@ -61,11 +60,10 @@ def search(
     enforced_filters = [_created_by_filter(user), *(filters or [])]
     response = utils.search_assets(
         "conversations", None, text, enforced_filters, sort or {}, size, page,
-        es_client=es_client,
     )
     return response
 
-def get(_id: str, user: Optional[str] = None, es_client: Optional["Elasticsearch"] = None) -> Dict[str, Any]:
+def get(_id: str, user: Optional[str] = None) -> Dict[str, Any]:
     """Get a conversation by its _id.
 
     Args:
@@ -74,7 +72,7 @@ def get(_id: str, user: Optional[str] = None, es_client: Optional["Elasticsearch
     Returns:
         The conversation document from Elasticsearch.
     """
-    client = es_client if es_client is not None else es("studio")
+    client = es("studio")
     es_response = client.get(
         index=INDEX_NAME,
         id=_id,
@@ -83,7 +81,7 @@ def get(_id: str, user: Optional[str] = None, es_client: Optional["Elasticsearch
     _assert_owner(es_response, user)
     return es_response
 
-def create(doc: Dict[str, Any], _id: str = None, user: str = None, via: str = None, es_client: Optional["Elasticsearch"] = None) -> Dict[str, Any]:
+def create(doc: Dict[str, Any], _id: str = None, user: str = None, via: str = None) -> Dict[str, Any]:
     """Create a conversation.
 
     Args:
@@ -114,7 +112,7 @@ def create(doc: Dict[str, Any], _id: str = None, user: str = None, via: str = No
     doc = utils.copy_fields_to_search("conversations", doc)
     
     # Submit
-    client = es_client if es_client is not None else es("studio")
+    client = es("studio")
     es_response = client.index(
         index=INDEX_NAME,
         id=_id,
@@ -123,7 +121,7 @@ def create(doc: Dict[str, Any], _id: str = None, user: str = None, via: str = No
     )
     return es_response
 
-def update(_id: str, doc_partial: Dict[str, Any], user: str = None, via: str = None, refresh: bool = True, es_client: Optional["Elasticsearch"] = None) -> Dict[str, Any]:
+def update(_id: str, doc_partial: Dict[str, Any], user: str = None, via: str = None, refresh: bool = True) -> Dict[str, Any]:
     """Update a conversation by its _id.
 
     Args:
@@ -138,7 +136,7 @@ def update(_id: str, doc_partial: Dict[str, Any], user: str = None, via: str = N
         The response from the Elasticsearch update operation.
     """
     
-    client = es_client if es_client is not None else es("studio")
+    client = es("studio")
 
     # Verify the caller owns the conversation before mutating it.
     owner_check = client.get(
@@ -164,7 +162,7 @@ def update(_id: str, doc_partial: Dict[str, Any], user: str = None, via: str = N
     )
     return es_response
 
-def delete(_id: str, user: Optional[str] = None, es_client: Optional["Elasticsearch"] = None) -> Dict[str, Any]:
+def delete(_id: str, user: Optional[str] = None) -> Dict[str, Any]:
     """Delete a conversation by its _id.
 
     Args:
@@ -173,7 +171,7 @@ def delete(_id: str, user: Optional[str] = None, es_client: Optional["Elasticsea
     Returns:
         The response from the Elasticsearch delete operation.
     """
-    client = es_client if es_client is not None else es("studio")
+    client = es("studio")
     owner_check = client.get(
         index=INDEX_NAME,
         id=_id,

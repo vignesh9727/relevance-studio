@@ -84,20 +84,20 @@ def get_default_user_and_client() -> Tuple[Dict[str, Any], Elasticsearch]:
 
 def get_mcp_auth_from_context(ctx: Optional[Any]) -> Tuple[str, Optional[Elasticsearch]]:
     """
-    Get authenticated user and ES client from FastMCP context state.
+    Get authenticated user from FastMCP context state.
 
-    Call from tool handlers that accept Context. Returns (username, es_client).
-    When es_client is None, API modules fall back to es("studio").
+    Call from tool handlers that accept Context. Returns (username, None).
+    API modules now use es("studio") or es("content") which automatically
+    pick up the request-scoped client from ContextVar.
 
     Args:
         ctx: FastMCP Context from tool parameter, or None.
 
     Returns:
-        (username, es_client) - username for user= param, es_client for es_client= param.
+        (username, None) - username for user= param.
     """
     if ctx is None:
         return "system", None
     user = ctx.get_state("mcp_user")
-    es_client = ctx.get_state("mcp_es_client")
     username = (user.get("username") if isinstance(user, dict) else None) or "system"
-    return username, es_client
+    return username, None

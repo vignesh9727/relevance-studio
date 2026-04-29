@@ -14,6 +14,7 @@ import socket
 import subprocess
 import sys
 import time
+import urllib3
 from typing import Optional, Tuple
 
 import pytest
@@ -106,6 +107,7 @@ def cert_dir(tmp_path):
     not shutil.which("openssl"),
     reason="openssl not available",
 )
+@pytest.mark.filterwarnings("ignore:Unverified HTTPS request")
 class TestFlaskTlsIntegration:
     """TLS integration tests for Flask server."""
 

@@ -84,7 +84,7 @@ class TestGetMcpAuthFromContext:
         )
         username, es_client = mcp_auth.get_mcp_auth_from_context(ctx)
         assert username == "alice"
-        assert es_client is not None
+        assert es_client is None
 
     def test_context_missing_user_falls_back_to_system(self):
         ctx = MagicMock()
